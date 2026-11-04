@@ -14,6 +14,12 @@ function KanjiSummary({ entry }) {
   const [isSaving, setIsSaving] = useState(false);
   const savedEntry = savedWords.find((word) => word.slug === `kanji-${entry.character}`);
   const kanji = entry.character;
+  const meanings = Array.isArray(entry.meanings) ? entry.meanings.filter(Boolean) : [];
+  const onYomi = Array.isArray(entry.on) ? entry.on.filter(Boolean) : [];
+  const kunYomi = Array.isArray(entry.kun) ? entry.kun.filter(Boolean) : [];
+  const examples = (Array.isArray(entry.examples) ? entry.examples : [])
+    .filter((word) => word && typeof word === "object" &&
+      (word.exampleWord || word.k?.[0] || word.r?.[0]));
 
   async function saveToAnki() {
     if (isSaving) return;
@@ -22,29 +28,56 @@ function KanjiSummary({ entry }) {
       slug: `kanji-${kanji}`,
       word: kanji,
       reading: [
-        entry.on.length ? `ON'YOMI: ${entry.on.join(", ")}` : "",
-        entry.kun.length ? `KUN'YOMI: ${entry.kun.join(", ")}` : "",
+        onYomi.length ? `ON'YOMI: ${onYomi.join(", ")}` : "",
+        kunYomi.length ? `KUN'YOMI: ${kunYomi.join(", ")}` : "",
       ].filter(Boolean).join("; "),
-      meaning: entry.meanings.join(", "),
+      meaning: meanings.join(", "),
       source: "KANJIDIC2",
     };
     saveWord(savedKanji);
 
-    const examples = entry.examples.map((word) => {
-      const written = word.exampleWord || word.k[0] || word.r[0];
-      return `${written} (${word.r[0] || ""}): ${word.s.slice(0, 2).flatMap((sense) => sense.g).join("; ")}`;
-    });
-    const back = [
-      `MEANING\n${entry.meanings.join(", ") || t("dictionary.noMeaning")}`,
-      entry.on.length ? `ON'YOMI\n${entry.on.join(", ")}` : "",
-      entry.kun.length ? `KUN'YOMI\n${entry.kun.join(", ")}` : "",
-      examples.length ? `EXAMPLE WORDS\n${examples.join("\n")}` : "",
-    ].filter(Boolean).join("\n\n");
+    const exampleItems = examples.map((word) => {
+      const written = word?.exampleWord || word?.k?.[0] || word?.r?.[0] || "";
+      const senses = Array.isArray(word?.s) ? word.s.slice(0, 2) : [];
+      return {
+        word: written,
+        reading: word?.r?.[0] || "",
+        meanings: senses.flatMap((sense) =>
+          Array.isArray(sense?.g) ? sense.g.filter(Boolean) : [],
+        ),
+      };
+    }).filter((word) => word.word);
+    const backSections = [
+      {
+        title: "MEANING",
+        type: "meanings",
+        items: meanings,
+        emptyText: t("dictionary.noMeaning"),
+      },
+      {
+        title: "ON'YOMI",
+        type: "readings",
+        items: onYomi,
+        emptyText: t("explorer.noReadings"),
+      },
+      {
+        title: "KUN'YOMI",
+        type: "readings",
+        items: kunYomi,
+        emptyText: t("explorer.noReadings"),
+      },
+      {
+        title: "EXAMPLE WORDS",
+        type: "examples",
+        items: exampleItems,
+        emptyText: t("explorer.noExamples"),
+      },
+    ];
 
     try {
       const result = await saveKanjiToAnki({
         kanji,
-        back,
+        backSections,
         deckName: ankiSettings.deck,
         modelName: ankiSettings.model,
         frontField: ankiSettings.frontField,
@@ -87,18 +120,18 @@ function KanjiSummary({ entry }) {
         <div>
           <h4 className="text-xs font-bold uppercase tracking-wider text-primary">{t("dictionary.meanings")}</h4>
           <p className="mt-1 text-sm leading-6 text-gray-200">
-            {entry.meanings.length ? entry.meanings.join(", ") : t("dictionary.noMeaning")}
+            {meanings.length ? meanings.join(", ") : t("dictionary.noMeaning")}
           </p>
         </div>
 
         <dl className="grid gap-3 sm:grid-cols-2">
           <div className="border border-white/10 bg-[#202421]/70 p-3">
             <dt className="text-xs font-bold uppercase tracking-wider text-gray-400">{t("dictionary.onYomi")}</dt>
-            <dd className="mt-1 text-base text-gray-100">{entry.on.join(" · ") || t("explorer.noReadings")}</dd>
+            <dd className="mt-1 text-base text-gray-100">{onYomi.join(" · ") || t("explorer.noReadings")}</dd>
           </div>
           <div className="border border-white/10 bg-[#202421]/70 p-3">
             <dt className="text-xs font-bold uppercase tracking-wider text-gray-400">{t("dictionary.kunYomi")}</dt>
-            <dd className="mt-1 text-base text-gray-100">{entry.kun.join(" · ") || t("explorer.noReadings")}</dd>
+            <dd className="mt-1 text-base text-gray-100">{kunYomi.join(" · ") || t("explorer.noReadings")}</dd>
           </div>
         </dl>
 
@@ -106,17 +139,21 @@ function KanjiSummary({ entry }) {
           <h4 className="mb-2 inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-primary">
             <BookOpen size={16} /> {t("dictionary.wordsUsingKanji")}
           </h4>
-          {entry.examples.length ? (
+          {examples.length ? (
             <ul className="divide-y divide-white/10 border-y border-white/10">
-              {entry.examples.map((word, index) => {
-                const written = word.exampleWord || word.k[0] || word.r[0];
-                const meanings = word.s.slice(0, 2).flatMap((sense) => sense.g).join("; ");
+              {examples.map((word, index) => {
+                const written = word.exampleWord || word.k?.[0] || word.r?.[0];
+                const reading = word.r?.[0] || "";
+                const senses = Array.isArray(word.s) ? word.s.slice(0, 2) : [];
+                const wordMeanings = senses.flatMap((sense) =>
+                  Array.isArray(sense?.g) ? sense.g.filter(Boolean) : [],
+                ).join("; ");
                 return (
-                  <li key={`${written}-${word.r[0]}-${index}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
+                  <li key={`${written}-${reading}-${index}`} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
                     <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
                       <span className="font-serif text-xl text-primary">{written}</span>
-                      {word.r[0] && <span className="text-sm text-gray-300">{word.r[0]}</span>}
-                      <span className="text-sm leading-5 text-gray-300">{meanings}</span>
+                      {reading && <span className="text-sm text-gray-300">{reading}</span>}
+                      {wordMeanings && <span className="text-sm leading-5 text-gray-300">{wordMeanings}</span>}
                     </div>
                     <a
                       href={`https://jisho.org/search/${encodeURIComponent(written)}`}

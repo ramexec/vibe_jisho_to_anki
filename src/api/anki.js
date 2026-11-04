@@ -117,6 +117,100 @@ const jishoCardCss = `
   text-align: left;
   white-space: pre-line;
 }
+.jta-back .jta-back {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.jta-section + .jta-section {
+  margin-top: 1.25rem;
+  padding-top: 1.15rem;
+  border-top: 1px solid rgba(47, 72, 61, 0.12);
+}
+.jta-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.7rem;
+  color: #78877b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+.jta-section-title::before {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: #d4775b;
+  content: "";
+}
+.jta-reading-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.jta-reading {
+  display: inline-flex;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid rgba(47, 72, 61, 0.13);
+  border-radius: 999px;
+  background: #f3f2eb;
+  color: #34443c;
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
+  font-size: 1.05em;
+}
+.jta-sense + .jta-sense,
+.jta-example + .jta-example {
+  margin-top: 0.8rem;
+}
+.jta-pos {
+  display: inline-block;
+  margin-bottom: 0.3rem;
+  color: #77877b;
+  font-size: 0.78em;
+  font-weight: 700;
+}
+.jta-meaning-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.jta-meaning-list li + li {
+  margin-top: 0.15rem;
+}
+.jta-example {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 0.15rem 0.9rem;
+  align-items: baseline;
+}
+.jta-example-word {
+  overflow-wrap: anywhere;
+  color: #34443c;
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+.jta-example-reading {
+  color: #78877b;
+  font-size: 0.85em;
+}
+.jta-example-meanings {
+  grid-column: 1 / -1;
+  color: #56665d;
+  font-size: 0.92em;
+}
+.jta-empty {
+  margin: 0;
+  color: #89948c;
+  font-size: 0.9em;
+  font-style: italic;
+}
 #answer {
   width: min(100%, 760px);
   height: 1px;
@@ -136,7 +230,34 @@ const jishoCardCss = `
   background: rgba(36, 46, 40, 0.96);
   color: #e7e5dc;
 }
+.card.nightMode .jta-back .jta-back {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
 .card.nightMode .jta-front::before {
+  color: #aab8aa;
+}
+.card.nightMode .jta-section + .jta-section {
+  border-top-color: rgba(226, 232, 221, 0.13);
+}
+.card.nightMode .jta-section-title,
+.card.nightMode .jta-pos,
+.card.nightMode .jta-example-reading {
+  color: #aab8aa;
+}
+.card.nightMode .jta-reading {
+  border-color: rgba(226, 232, 221, 0.13);
+  background: #303b34;
+  color: #e7e5dc;
+}
+.card.nightMode .jta-example-word {
+  color: #e7e5dc;
+}
+.card.nightMode .jta-example-meanings {
+  color: #c1c9c0;
+}
+.card.nightMode .jta-empty {
   color: #aab8aa;
 }
 .card.nightMode #answer {
@@ -188,7 +309,7 @@ export async function createJishoNoteType() {
 }
 
 export function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (character) => ({
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
     "<": "&lt;",
     ">": "&gt;",
@@ -197,13 +318,70 @@ export function escapeHtml(value) {
   })[character]);
 }
 
+function renderBackSections(sections) {
+  return (Array.isArray(sections) ? sections : [])
+    .filter((section) => section && typeof section === "object")
+    .map((section) => {
+      const title = escapeHtml(section.title || "DETAILS");
+      const items = Array.isArray(section.items)
+        ? section.items.filter((item) => item != null && item !== "")
+        : [];
+      const emptyText = escapeHtml(section.emptyText || "Not available.");
+      let content;
+
+      if (!items.length) {
+        content = `<p class="jta-empty">${emptyText}</p>`;
+      } else if (section.type === "readings") {
+        content = `<div class="jta-reading-list">${items.map((reading) =>
+          `<span class="jta-reading">${escapeHtml(reading)}</span>`,
+        ).join("")}</div>`;
+      } else if (section.type === "meanings") {
+        content = items.map((item) => {
+          if (typeof item === "string") {
+            return `<div class="jta-sense"><ul class="jta-meaning-list"><li>${escapeHtml(item)}</li></ul></div>`;
+          }
+          const parts = Array.isArray(item.parts) ? item.parts.filter(Boolean) : [];
+          const meanings = Array.isArray(item.meanings) ? item.meanings.filter(Boolean) : [];
+          return `<div class="jta-sense">${parts.length
+            ? `<div class="jta-pos">${escapeHtml(parts.join(", "))}</div>`
+            : ""}${meanings.length
+            ? `<ul class="jta-meaning-list">${meanings.map((meaning) =>
+              `<li>${escapeHtml(meaning)}</li>`,
+            ).join("")}</ul>`
+            : `<p class="jta-empty">${emptyText}</p>`}</div>`;
+        }).join("");
+      } else if (section.type === "examples") {
+        content = items.map((item) => {
+          const word = String(item.word || "").trim();
+          if (!word) return "";
+          const reading = String(item.reading || "").trim();
+          const meanings = Array.isArray(item.meanings)
+            ? item.meanings.filter(Boolean)
+            : [];
+          return `<div class="jta-example"><span class="jta-example-word">${escapeHtml(word)}</span>${reading
+            ? `<span class="jta-example-reading">${escapeHtml(reading)}</span>`
+            : ""}${meanings.length
+            ? `<span class="jta-example-meanings">${meanings.map(escapeHtml).join("; ")}</span>`
+            : ""}</div>`;
+        }).join("");
+        if (!content) content = `<p class="jta-empty">${emptyText}</p>`;
+      } else {
+        content = `<ul class="jta-meaning-list">${items.map((item) =>
+          `<li>${escapeHtml(item)}</li>`,
+        ).join("")}</ul>`;
+      }
+
+      return `<section class="jta-section"><h3 class="jta-section-title">${title}</h3>${content}</section>`;
+    }).join("");
+}
+
 export async function addAnkiNote({
   deckName,
   modelName,
   frontField,
   backField,
   front,
-  back,
+  backSections,
   tags,
 }) {
   if (!deckName) throw new Error("Choose a deck in Settings before adding a card.");
@@ -214,7 +392,7 @@ export async function addAnkiNote({
 
   const fields = {
     [frontField]: `<div class="jta-front">${escapeHtml(front)}</div>`,
-    [backField]: `<div class="jta-back">${escapeHtml(back).replace(/\n/g, "<br>")}</div>`,
+    [backField]: `<div class="jta-back">${renderBackSections(backSections)}</div>`,
   };
   const noteId = await ankiRequest("addNote", {
     note: {
@@ -239,7 +417,7 @@ function getKanjiSyncTag(kanji) {
 
 export async function saveKanjiToAnki({
   kanji,
-  back,
+  backSections,
   deckName,
   modelName,
   frontField,
@@ -258,7 +436,7 @@ export async function saveKanjiToAnki({
   const syncTag = getKanjiSyncTag(kanji);
   const fields = {
     [frontField]: `<div class="jta-front">${escapeHtml(kanji)}</div>`,
-    [backField]: `<div class="jta-back">${escapeHtml(back).replace(/\n/g, "<br>")}</div>`,
+    [backField]: `<div class="jta-back">${renderBackSections(backSections)}</div>`,
   };
   const matchingNotes = await ankiRequest("findNotes", {
     query: `tag:${syncTag}`,
@@ -295,7 +473,7 @@ export async function saveKanjiToAnki({
 function plainText(value) {
   return String(value || "")
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(div|p|li)>/gi, "\n")
+    .replace(/<\/(div|p|li|h[1-6]|section|article|span)>/gi, "\n")
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")

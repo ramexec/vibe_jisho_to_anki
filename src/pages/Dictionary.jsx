@@ -9,11 +9,14 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 function getWord(entry) {
-  return entry.k[0] || entry.r[0] || "";
+  return entry?.k?.[0] || entry?.r?.[0] || "";
 }
 
 function getMeaning(entry) {
-  return entry.s.flatMap((sense) => sense.g).join("; ");
+  return (Array.isArray(entry?.s) ? entry.s : [])
+    .flatMap((sense) => Array.isArray(sense?.g) ? sense.g : [])
+    .filter(Boolean)
+    .join("; ");
 }
 
 function Dictionary() {
@@ -36,15 +39,21 @@ function Dictionary() {
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState("");
 
+  const selectedReadings = Array.isArray(selected?.r)
+    ? selected.r.filter(Boolean)
+    : [];
   const selectedWord = selected ? getWord(selected) : "";
   const selectedSlug = selected
-    ? `jmdict-${selectedWord}-${selected.r[0] || ""}`
+    ? `jmdict-${selectedWord}-${selectedReadings[0] || ""}`
     : "";
   const isSaved = savedWords.some((word) => word.slug === selectedSlug);
   const jishoUrl = `https://jisho.org/search/${encodeURIComponent(query.trim())}`;
   const detailJishoUrl = `https://jisho.org/search/${encodeURIComponent(selectedWord || query.trim())}`;
 
-  const selectedSenses = useMemo(() => selected?.s ?? [], [selected]);
+  const selectedSenses = useMemo(
+    () => Array.isArray(selected?.s) ? selected.s : [],
+    [selected],
+  );
 
   useEffect(() => {
     if (searchQuery.trim()) runSearch(searchQuery);
@@ -96,7 +105,7 @@ function Dictionary() {
     saveWord({
       slug: selectedSlug,
       word: selectedWord,
-      reading: selected.r.join(", "),
+      reading: selectedReadings.join(", "),
       meaning: getMeaning(selected),
       source: "JMdict",
     });
@@ -106,12 +115,26 @@ function Dictionary() {
   async function addSelectedToAnki() {
     if (!selected) return;
     setIsAdding(true);
-    const back = [
-      `READINGS\n${selected.r.join(", ") || "—"}`,
-      ...selectedSenses.map((sense, index) =>
-        `${sense.p.length ? `${sense.p.join(", ")}\n` : ""}${index + 1}. ${sense.g.join(", ")}`,
-      ),
-    ].join("\n\n");
+    const backSections = [
+      {
+        title: "READINGS",
+        type: "readings",
+        items: selectedReadings,
+        emptyText: t("explorer.noReadings"),
+      },
+      {
+        title: "MEANING",
+        type: "meanings",
+        items: selectedSenses
+          .filter(Boolean)
+          .map((sense) => ({
+            parts: Array.isArray(sense.p) ? sense.p.filter(Boolean) : [],
+            meanings: Array.isArray(sense.g) ? sense.g.filter(Boolean) : [],
+          }))
+          .filter((sense) => sense.parts.length || sense.meanings.length),
+        emptyText: t("dictionary.noMeaning"),
+      },
+    ];
 
     try {
       const noteId = await addAnkiNote({
@@ -120,7 +143,7 @@ function Dictionary() {
         frontField: ankiSettings.frontField,
         backField: ankiSettings.backField,
         front: selectedWord,
-        back,
+        backSections,
         tags: ankiSettings.tags || "",
       });
       recordAddedCard({
@@ -243,8 +266,8 @@ function Dictionary() {
                 <div className="min-w-0">
                   <span className="text-xs uppercase tracking-widest text-gray-400">{t("dictionary.entry")}</span>
                   <h3 className="mt-2 break-words font-serif text-4xl text-primary sm:text-5xl">{selectedWord}</h3>
-                  {selected.r.length > 0 && (
-                    <p className="mt-2 text-lg text-gray-200">{selected.r.join(" · ")}</p>
+                  {selectedReadings.length > 0 && (
+                    <p className="mt-2 text-lg text-gray-200">{selectedReadings.join(" · ")}</p>
                   )}
                 </div>
                 <a
