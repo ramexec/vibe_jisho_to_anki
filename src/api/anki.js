@@ -1,26 +1,28 @@
 export async function ankiRequest(action, params = {}) {
-  if (import.meta.env.PROD) {
-    throw new Error(
-      "AnkiConnect is available when running the app locally with npm run dev; GitHub Pages cannot proxy requests to your computer.",
-    );
-  }
   let response;
   try {
-    response = await fetch("/api/anki", {
+    response = await fetch(
+      import.meta.env.PROD ? "http://127.0.0.1:8765" : "/api/anki",
+      {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, version: 6, params }),
-    });
+      },
+    );
   } catch {
     throw new Error(
-      "Could not reach AnkiConnect. Open Anki, make sure AnkiConnect is installed, and run this app with npm run dev.",
+      import.meta.env.PROD
+        ? "Could not reach AnkiConnect on this computer. Open Anki and allow local-network access for this site if your browser asks. If it still fails, add https://ramexec.github.io to AnkiConnect's webCorsOriginList and restart Anki."
+        : "Could not reach AnkiConnect. Open Anki, make sure AnkiConnect is installed, and run this app with npm run dev.",
     );
   }
 
   if (!response.ok) {
     if (response.status >= 500) {
       throw new Error(
-        "Could not reach AnkiConnect. Open Anki, make sure AnkiConnect is installed, and run this app with npm run dev.",
+        import.meta.env.PROD
+          ? "Could not reach AnkiConnect on this computer. Open Anki and make sure AnkiConnect is installed and enabled."
+          : "Could not reach AnkiConnect. Open Anki, make sure AnkiConnect is installed, and run this app with npm run dev.",
       );
     }
     throw new Error(`AnkiConnect returned HTTP ${response.status}.`);

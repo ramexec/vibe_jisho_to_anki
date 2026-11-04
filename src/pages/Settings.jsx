@@ -268,14 +268,15 @@ function Settings() {
           Keep Anki open with AnkiConnect installed. The development server forwards requests to AnkiConnect at 127.0.0.1:8765.
         </p>
       </section>
-      {import.meta.env.PROD && (
-        <section role="status" className="border border-amber-400/50 bg-amber-950/30 p-4 text-sm leading-6 text-amber-100 sm:p-5">
-          <h3 className="font-bold">Static GitHub Pages limitations</h3>
+      <section role="note" className="border border-amber-400/50 bg-amber-950/30 p-4 text-sm leading-6 text-amber-100 sm:p-5">
+          <h3 className="font-bold">Connect the hosted app to Anki</h3>
           <p className="mt-2">
-            GitHub Pages cannot run the local API proxy. AnkiConnect and live dictionary lookup work when this app is run locally with <code>npm run dev</code>, not from this hosted page.
+            GitHub Pages can connect directly to AnkiConnect on this computer. In Anki, open <strong>Tools → Add-ons → AnkiConnect → Config</strong> and add <code>https://ramexec.github.io</code> to the <code>webCorsOriginList</code> array. Save the config and restart Anki. Keep <code>webBindAddress</code> set to <code>127.0.0.1</code>; do not expose AnkiConnect to your network or the internet. Then return here, test the connection, and allow local-network access in your browser if prompted.
           </p>
-        </section>
-      )}
+          <p className="mt-2">
+            Live Jisho and kanji lookups still need the development proxy, so those lookups are unavailable on the static hosted site.
+          </p>
+      </section>
     </div>
   );
 }
