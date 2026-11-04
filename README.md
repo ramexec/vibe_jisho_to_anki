@@ -2,7 +2,7 @@
 
 A Japanese-learning companion for looking up words and kanji, keeping a personal vocabulary list, and sending flashcards to Anki.
 
-**Try the app:** [ramexec.github.io/jisho_to_anki](https://ramexec.github.io/jisho_to_anki/)
+**Try the app:** [ramexec.github.io/jisho_to_anki](https://ramexec.github.io/vibe_jisho_to_anki/)
 
 ## What you can do
 
