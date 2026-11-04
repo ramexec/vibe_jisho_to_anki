@@ -12,7 +12,13 @@ npm run dev
 
 ### Deploy to GitHub Pages
 
-Pushing to `main` builds the site and publishes `dist/` to the `gh-pages` branch. In the repository settings, open **Pages** and select **Deploy from a branch**, then choose `gh-pages` and `/ (root)`. The site URL is `https://ramexec.github.io/jisho_to_anki/`.
+To publish your current local changes, run:
+
+```sh
+npm run deploy
+```
+
+This builds the site with the correct project URL and pushes the generated `dist/` files to `gh-pages`. You can also push to `main`; GitHub Actions will build and publish automatically. In the repository settings, **Pages** should use **Deploy from a branch**, `gh-pages`, and `/ (root)`. The site URL is `https://ramexec.github.io/jisho_to_anki/`.
 
 GitHub Pages is static hosting. It can host the app UI and browser-stored vocabulary, but it cannot run the Vite API proxy required for live Jisho/kanji lookups or AnkiConnect. Those integrations require running the app locally with `npm run dev`; hosted users can open Jisho directly for searches.
 
