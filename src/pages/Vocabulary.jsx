@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { BookOpen, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const emptyForm = { word: "", reading: "", meaning: "" };
 const inputClass =
@@ -70,6 +71,7 @@ function Vocabulary() {
       return;
     }
 
+    const wasEditing = Boolean(editingSlug);
     const updates = {
       word,
       reading: form.reading.trim(),
@@ -81,13 +83,25 @@ function Vocabulary() {
       saveWord({ ...updates, slug: `manual-${Date.now()}`, source: "manual" });
     }
     cancelEdit();
+    toast.success(t(wasEditing ? "vocabulary.updatedSuccess" : "vocabulary.addedSuccess"));
   }
 
   function deleteWord(slug) {
-    if (window.confirm(t("vocabulary.confirmDelete"))) {
-      removeWord(slug);
-      if (editingSlug === slug) cancelEdit();
-    }
+    toast(t("vocabulary.confirmDelete"), {
+      duration: 10000,
+      action: {
+        label: t("vocabulary.delete"),
+        onClick: () => {
+          removeWord(slug);
+          if (editingSlug === slug) cancelEdit();
+          toast.success(t("vocabulary.deletedSuccess"));
+        },
+      },
+      cancel: {
+        label: t("vocabulary.cancel"),
+        onClick: () => {},
+      },
+    });
   }
 
   return (

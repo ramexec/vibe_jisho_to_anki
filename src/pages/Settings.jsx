@@ -7,6 +7,7 @@ import {
 } from "../api/anki";
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const fieldClass =
   "mt-1 min-h-11 w-full border border-white/20 bg-[#202421] px-3 py-2 text-sm text-white outline-none focus:border-primary";
@@ -34,7 +35,7 @@ function Settings() {
     setSettings((current) => ({ ...current, [name]: value }));
   }
 
-  async function connectToAnki() {
+  async function connectToAnki(notify = false) {
     setIsChecking(true);
     setConnection("checking");
     setMessage("");
@@ -69,10 +70,12 @@ function Settings() {
       setConnection("connected");
       setAnkiConnection("connected");
       setMessage({ key: "settings.decksFound", options: { count: setup.decks.length } });
+      if (notify) toast.success(t("settings.decksFound", { count: setup.decks.length }));
     } catch (error) {
       setConnection("disconnected");
       setAnkiConnection("disconnected");
       setMessage({ key: "settings.connectionError", detail: error.message });
+      if (notify) toast.error(`${t("settings.connectionError")} ${error.message}`);
     } finally {
       setIsChecking(false);
     }
@@ -102,16 +105,17 @@ function Settings() {
       }));
     } catch (error) {
       setMessage({ key: "settings.fieldsError", detail: error.message });
+      toast.error(`${t("settings.fieldsError")} ${error.message}`);
     }
   }
 
   function saveSettings() {
     if (settings.frontField && settings.frontField === settings.backField) {
-      setMessage({ key: "settings.fieldsDifferent" });
+      toast.error(t("settings.fieldsDifferent"));
       return;
     }
     setAnkiSettings(settings);
-    setMessage({ key: "settings.settingsSaved" });
+    toast.success(t("settings.settingsSaved"));
   }
 
   async function makeNoteType() {
@@ -135,9 +139,12 @@ function Settings() {
       setAnkiSettings(nextSettings);
       setConnection("connected");
       setAnkiConnection("connected");
-      setMessage({ key: created ? "settings.noteTypeCreated" : "settings.noteTypeExists" });
+      const resultMessage = t(created ? "settings.noteTypeCreated" : "settings.noteTypeExists");
+      setMessage(resultMessage);
+      toast.success(resultMessage);
     } catch (error) {
       setMessage({ key: "settings.createFailed", detail: error.message });
+      toast.error(`${t("settings.createFailed")} ${error.message}`);
     } finally {
       setIsCreating(false);
     }
@@ -156,7 +163,7 @@ function Settings() {
           </div>
           <button
             type="button"
-            onClick={connectToAnki}
+            onClick={() => connectToAnki(true)}
             disabled={isChecking}
             className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 border border-primary px-3 py-2 text-sm text-primary hover:bg-primary hover:text-black disabled:opacity-60"
           >

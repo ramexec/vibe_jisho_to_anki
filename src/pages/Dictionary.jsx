@@ -11,6 +11,7 @@ import { lookupKanji, searchJisho } from "../api/jisho";
 import { addAnkiNote, saveKanjiToAnki } from "../api/anki";
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 function getJapanese(entry) {
   return entry.japanese?.find((item) => item.word) ?? entry.japanese?.[0] ?? {};
@@ -42,8 +43,6 @@ function Dictionary() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState("");
-  const [ankiMessage, setAnkiMessage] = useState("");
-  const [ankiError, setAnkiError] = useState(false);
   const messageText = (message) => {
     if (!message) return "";
     if (typeof message === "string") return message;
@@ -68,7 +67,7 @@ function Dictionary() {
   async function search(value = query) {
     const trimmedQuery = value.trim();
     if (!trimmedQuery) {
-      setError({ key: "dictionary.emptyQuery" });
+      toast.error(t("dictionary.emptyQuery"));
       return;
     }
 
@@ -79,8 +78,6 @@ function Dictionary() {
     setSelected(null);
     setKanjiEntry(null);
     setExampleSentence("");
-    setAnkiMessage("");
-    setAnkiError(false);
     const currentRequestId = ++requestId.current;
     useAppStore.getState().setSearchQuery(trimmedQuery);
     addToHistory(trimmedQuery);
@@ -99,7 +96,7 @@ function Dictionary() {
       if (!results.length) setError({ key: "dictionary.noResults", options: { query: trimmedQuery } });
     } catch (requestError) {
       if (currentRequestId === requestId.current) {
-        setError({ key: "dictionary.fallbackError", detail: requestError.message });
+        toast.error(messageText({ key: "dictionary.fallbackError", detail: requestError.message }));
       }
     } finally {
       if (currentRequestId === requestId.current) setIsLoading(false);
@@ -114,6 +111,7 @@ function Dictionary() {
         reading: [...(kanjiEntry.on_readings || []), ...(kanjiEntry.kun_readings || [])].join(", "),
         meaning: kanjiEntry.meanings?.join(", ") || t("dictionary.noMeaning"),
       });
+      toast.success(t("dictionary.saved"));
       return;
     }
     if (!selected) return;
@@ -125,6 +123,7 @@ function Dictionary() {
       reading: japanese.reading || "",
       meaning: getMeaning(selected, t("dictionary.noDefinition")),
     });
+    toast.success(t("dictionary.saved"));
   }
 
   async function addSelectedToAnki() {
@@ -150,8 +149,6 @@ function Dictionary() {
     const back = [...meanings, ...(exampleSentence.trim() ? [`EXAMPLE SENTENCE\n${exampleSentence.trim()}`] : [])].join("\n\n");
 
     setIsAdding(true);
-    setAnkiMessage("");
-    setAnkiError(false);
     try {
       if (kanjiEntry) {
         saveWord({
@@ -162,7 +159,6 @@ function Dictionary() {
           kanjiData: kanjiEntry,
           source: "kanji-explorer",
         });
-        setAnkiMessage({ key: "dictionary.kanjiSavedSyncing" });
         const result = await saveKanjiToAnki({
           kanji: query,
           back,
@@ -191,7 +187,10 @@ function Dictionary() {
           });
         }
         setAnkiConnection("connected");
-        setAnkiMessage({ key: result.created ? "dictionary.kanjiAdded" : "dictionary.kanjiUpdated", options: { id: result.noteId } });
+        toast.success(messageText({
+          key: result.created ? "dictionary.kanjiAdded" : "dictionary.kanjiUpdated",
+          options: { id: result.noteId },
+        }));
         return;
       }
 
@@ -211,12 +210,11 @@ function Dictionary() {
         addedAt: new Date().toISOString(),
       });
       setAnkiConnection("connected");
-      setAnkiMessage({ key: "dictionary.added", options: { id: noteId } });
+      toast.success(messageText({ key: "dictionary.added", options: { id: noteId } }));
     } catch (requestError) {
-      setAnkiError(true);
-      setAnkiMessage(kanjiEntry
+      toast.error(messageText(kanjiEntry
         ? { key: "dictionary.kanjiSyncFailed", options: { error: requestError.message || t("dictionary.addFailed") } }
-        : { key: "dictionary.addFailed", detail: requestError.message });
+        : { key: "dictionary.addFailed", detail: requestError.message }));
     } finally {
       setIsAdding(false);
     }
@@ -275,8 +273,8 @@ function Dictionary() {
         )}
       </section>
 
-      {error && (
-        <div role="alert" className="border border-red-400/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
+      {error?.key === "dictionary.noResults" && (
+        <div role="status" className="border border-white/15 bg-[#202421] px-4 py-3 text-sm text-gray-200">
           {messageText(error)}
           <a
             href={`https://jisho.org/search/${encodeURIComponent(query)}`}
@@ -306,11 +304,6 @@ function Dictionary() {
               {isAdding ? t("dictionary.savingSyncing") : savedWords.some((word) => word.slug === `kanji-${query}`) ? t("dictionary.kanjiSyncAction") : t("dictionary.kanjiSaveAction")}
             </button>
           </div>
-          {ankiMessage && (
-            <p role="status" className={`mt-4 border-t border-white/15 pt-3 text-sm leading-6 ${ankiError ? "text-amber-200" : "text-emerald-300"}`}>
-              {messageText(ankiMessage)}
-            </p>
-          )}
           <div className="mt-5 grid gap-3 border-t border-white/15 pt-5 sm:grid-cols-2">
             <div>
               <p className="text-xs uppercase text-gray-400">{t("dictionary.onYomi")}</p>
@@ -358,7 +351,6 @@ function Dictionary() {
                       type="button"
                       onClick={() => {
                         setSelected(entry);
-                        setAnkiMessage("");
                       }}
                       aria-pressed={active}
                       className={`w-full px-4 py-4 text-left transition-colors hover:bg-white/5 ${active ? "border-l-2 border-primary bg-white/5" : "border-l-2 border-transparent"}`}
@@ -450,11 +442,6 @@ function Dictionary() {
                 >
               {isAdding ? t("dictionary.addingToAnki") : t("dictionary.addToAnki")}
                 </button>
-                {ankiMessage && (
-              <p role="status" className={`self-center text-sm ${ankiError ? "text-red-300" : "text-emerald-300"}`}>
-                {messageText(ankiMessage)}
-              </p>
-                )}
               </div>
               <a
                 href={jishoUrl}

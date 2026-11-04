@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
   BookOpen,
-  Check,
-  CircleAlert,
   LoaderCircle,
   RefreshCw,
   Search,
@@ -13,6 +11,7 @@ import { saveKanjiToAnki, syncKanjiFromAnki } from "../api/anki";
 import { listKanji, lookupKanji } from "../api/jisho";
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 const jlptLevels = ["jlpt-5", "jlpt-4", "jlpt-3", "jlpt-2", "jlpt-1"];
 const inputClass =
@@ -52,17 +51,10 @@ function Explorer() {
   const [isLoadingEntry, setIsLoadingEntry] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [listError, setListError] = useState("");
-  const [entryError, setEntryError] = useState("");
-  const [saveMessage, setSaveMessage] = useState("");
-  const [syncMessage, setSyncMessage] = useState("");
   const listRequestId = useRef(0);
   const entryRequestId = useRef(0);
-  const messageText = (message) => {
-    if (!message) return "";
-    if (typeof message === "string") return message;
-    return `${t(message.key, message.options)}${message.detail ? ` ${message.detail}` : ""}`;
-  };
+  const messageText = (message) =>
+    `${t(message.key, message.options)}${message.detail ? ` ${message.detail}` : ""}`;
 
   const selected = selectedKanji?.data;
   const selectedCharacter = selectedKanji?.character || "";
@@ -75,7 +67,9 @@ function Explorer() {
         if (requestId === listRequestId.current) setKanjiList(list);
       })
       .catch((error) => {
-        if (requestId === listRequestId.current) setListError({ key: "explorer.loadFailed", detail: error.message });
+        if (requestId === listRequestId.current) {
+          toast.error(`${t("explorer.loadFailed")} ${error.message}`);
+        }
       })
       .finally(() => {
         if (requestId === listRequestId.current) setIsLoadingList(false);
@@ -88,19 +82,16 @@ function Explorer() {
   async function selectKanji(character) {
     const normalized = character.trim();
     if (!normalized) {
-      setEntryError({ key: "explorer.emptyQuery" });
+      toast.error(t("explorer.emptyQuery"));
       return;
     }
     if (Array.from(normalized).length !== 1 || !/\p{Script=Han}/u.test(normalized)) {
-      setEntryError({ key: "explorer.invalidKanji" });
+      toast.error(t("explorer.invalidKanji"));
       return;
     }
 
     const requestId = ++entryRequestId.current;
     setIsLoadingEntry(true);
-    setEntryError("");
-    setSaveMessage("");
-    setSyncMessage("");
     try {
       const data = await lookupKanji(normalized);
       if (requestId === entryRequestId.current) {
@@ -109,7 +100,7 @@ function Explorer() {
       }
     } catch (error) {
       if (requestId === entryRequestId.current) {
-        setEntryError({ key: "explorer.lookupFailed", detail: error.message });
+        toast.error(messageText({ key: "explorer.lookupFailed", detail: error.message }));
         setSelectedKanji(null);
       }
     } finally {
@@ -139,8 +130,6 @@ function Explorer() {
     const localWord = makeSavedKanji(selectedCharacter, selected);
     saveWord(localWord);
     setIsSaving(true);
-    setSaveMessage({ key: "explorer.saving" });
-    setEntryError("");
 
     try {
       const result = await saveKanjiToAnki({
@@ -162,10 +151,12 @@ function Explorer() {
         });
       }
       setAnkiConnection("connected");
-      setSaveMessage({ key: result.created ? "dictionary.kanjiAdded" : "dictionary.kanjiUpdated", options: { id: result.noteId } });
+      toast.success(messageText({
+        key: result.created ? "dictionary.kanjiAdded" : "dictionary.kanjiUpdated",
+        options: { id: result.noteId },
+      }));
     } catch (error) {
-      setSaveMessage({ key: "explorer.saveFailed" });
-      setEntryError({ key: "dictionary.addFailed", detail: error.message });
+      toast.error(messageText({ key: "dictionary.addFailed", detail: error.message }));
     } finally {
       setIsSaving(false);
     }
@@ -173,8 +164,6 @@ function Explorer() {
 
   async function syncFromAnki() {
     setIsSyncing(true);
-    setSyncMessage("");
-    setEntryError("");
     try {
       const kanji = await syncKanjiFromAnki({
         frontField: ankiSettings.frontField,
@@ -182,14 +171,14 @@ function Explorer() {
       });
       kanji.forEach(saveWord);
       setAnkiConnection("connected");
-      setSyncMessage(
+      toast.success(messageText(
         kanji.length
           ? { key: "explorer.syncSuccess", options: { count: kanji.length } }
           : { key: "explorer.noCards" },
-      );
+      ));
     } catch (error) {
       setAnkiConnection("disconnected");
-      setEntryError({ key: "explorer.syncFailed", detail: error.message });
+      toast.error(messageText({ key: "explorer.syncFailed", detail: error.message }));
     } finally {
       setIsSyncing(false);
     }
@@ -224,19 +213,7 @@ function Explorer() {
           </button>
         </form>
 
-        {syncMessage && (
-          <p role="status" className="mt-3 flex items-center gap-2 text-sm text-emerald-300">
-            <Check size={16} /> {messageText(syncMessage)}
-          </p>
-        )}
       </section>
-
-      {entryError && (
-        <div role="alert" className="flex items-start gap-2 border border-red-400/60 bg-red-950/40 px-4 py-3 text-sm leading-6 text-red-200">
-          <CircleAlert size={17} className="mt-1 shrink-0" />
-          <span>{messageText(entryError)}</span>
-        </div>
-      )}
 
       {selected && (
         <section className="border border-yellow-200/70 bg-ldark p-4 sm:p-6">
@@ -270,12 +247,6 @@ function Explorer() {
               {isSaving ? t("explorer.saving") : savedEntry?.ankiNoteId ? t("explorer.updateAndSync") : t("explorer.saveAndAdd")}
             </button>
           </div>
-
-          {saveMessage && (
-            <p role="status" className={`mt-4 border-t border-white/15 pt-3 text-sm leading-6 ${entryError ? "text-amber-200" : "text-emerald-300"}`}>
-              {messageText(saveMessage)}
-            </p>
-          )}
 
           <div className="mt-5 grid gap-5 border-t border-white/15 pt-5 md:grid-cols-2">
             <div>
@@ -343,7 +314,6 @@ function Explorer() {
               value={level}
               onChange={(event) => {
                 setIsLoadingList(true);
-                setListError("");
                 setLevel(event.target.value);
               }}
               className="min-h-10 border border-white/20 bg-[#202421] px-3 text-white outline-none focus:border-primary"
@@ -353,7 +323,6 @@ function Explorer() {
           </label>
         </div>
 
-        {listError && <p role="alert" className="m-4 border border-red-400/50 bg-red-950/30 px-3 py-2 text-sm text-red-200">{messageText(listError)}</p>}
         {isLoadingList ? (
           <p className="flex items-center gap-2 p-6 text-sm text-gray-300"><LoaderCircle size={16} className="animate-spin" /> {t("explorer.loadingList")}</p>
         ) : kanjiList.length ? (
