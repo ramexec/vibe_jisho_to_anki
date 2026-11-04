@@ -274,7 +274,7 @@ function Settings() {
             GitHub Pages can connect directly to AnkiConnect on this computer. In Anki, open <strong>Tools → Add-ons → AnkiConnect → Config</strong> and add <code>https://ramexec.github.io</code> to the <code>webCorsOriginList</code> array. Save the config and restart Anki. Keep <code>webBindAddress</code> set to <code>127.0.0.1</code>; do not expose AnkiConnect to your network or the internet. Then return here, test the connection, and allow local-network access in your browser if prompted.
           </p>
           <p className="mt-2">
-            Live Jisho and kanji lookups still need the development proxy, so those lookups are unavailable on the static hosted site.
+            Kanji lookup works directly on the hosted site. Jisho word search still needs the local development proxy and is unavailable on the static hosted site.
           </p>
       </section>
     </div>
