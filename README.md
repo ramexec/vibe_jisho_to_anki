@@ -81,4 +81,4 @@ Local JMdict search is integrated. Possible next steps:
 
 ## Feedback
 
-Found a problem or have an idea? Open an issue in the [GitHub repository](https://github.com/ramexec/jisho_to_anki/issues).
+Found a problem or have an idea? Open an issue in the [GitHub repository](https://github.com/ramexec/vibe_jisho_to_anki/issues).
