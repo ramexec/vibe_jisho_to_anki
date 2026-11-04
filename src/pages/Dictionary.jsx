@@ -223,6 +223,14 @@ function Dictionary() {
       {error && (
         <div role="alert" className="border border-red-400/60 bg-red-950/40 px-4 py-3 text-sm text-red-200">
           {error}
+          <a
+            href={`https://jisho.org/search/${encodeURIComponent(query)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="ml-2 inline-flex items-center gap-1 font-bold underline underline-offset-2 hover:text-white"
+          >
+            Open this search on Jisho <ArrowUpRight size={14} />
+          </a>
         </div>
       )}
 

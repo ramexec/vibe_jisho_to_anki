@@ -1,6 +1,11 @@
 
 export async function searchJisho(query) {
   if (!query.trim()) return [];
+  if (import.meta.env.PROD) {
+    throw new Error(
+      "Live dictionary search needs a server proxy, which GitHub Pages does not provide. Open Jisho directly below or run the app locally.",
+    );
+  }
 
   let response;
   try {
@@ -23,6 +28,11 @@ export async function searchJisho(query) {
 }
 
 export async function lookupKanji(kanji) {
+  if (import.meta.env.PROD) {
+    throw new Error(
+      "Kanji lookup needs a server proxy, which GitHub Pages does not provide. Open Jisho directly below or run the app locally.",
+    );
+  }
   let response;
   try {
     response = await fetch(`/api/kanji/${encodeURIComponent(kanji)}`);

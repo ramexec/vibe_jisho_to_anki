@@ -10,6 +10,12 @@ npm install
 npm run dev
 ```
 
+### Deploy to GitHub Pages
+
+Pushing to `main` builds the site and publishes `dist/` to the `gh-pages` branch. In the repository settings, open **Pages** and select **Deploy from a branch**, then choose `gh-pages` and `/ (root)`. The site URL is `https://ramexec.github.io/jisho_to_anki/`.
+
+GitHub Pages is static hosting. It can host the app UI and browser-stored vocabulary, but it cannot run the Vite API proxy required for live Jisho/kanji lookups or AnkiConnect. Those integrations require running the app locally with `npm run dev`; hosted users can open Jisho directly for searches.
+
 ### Connect Anki
 
 1. Install and enable the AnkiConnect add-on in Anki, then keep Anki open.
@@ -17,4 +23,4 @@ npm run dev
 3. Open **Settings**, test the connection, choose a deck and note type, map the front and back fields, and save.
 4. Search the **Dictionary** and use **Add to Anki** on an entry. Use **Create JishoToAnki note type** if you want the app's suggested two-field card layout.
 
-Saved vocabulary and app settings are stored in this browser. The included Anki proxy is for local development; a deployed app needs a trusted backend/local proxy that can reach the user's AnkiConnect service. Do not expose AnkiConnect directly to the public internet.
+Saved vocabulary and app settings are stored in this browser. Do not expose AnkiConnect directly to the public internet.

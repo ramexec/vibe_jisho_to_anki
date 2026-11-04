@@ -1,4 +1,9 @@
 export async function ankiRequest(action, params = {}) {
+  if (import.meta.env.PROD) {
+    throw new Error(
+      "AnkiConnect is available when running the app locally with npm run dev; GitHub Pages cannot proxy requests to your computer.",
+    );
+  }
   let response;
   try {
     response = await fetch("/api/anki", {

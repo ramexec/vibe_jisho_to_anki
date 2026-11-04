@@ -265,9 +265,17 @@ function Settings() {
       <section className="border border-white/15 bg-[#202421] p-4 text-sm leading-6 text-gray-300 sm:p-5">
         <h3 className="font-bold text-white">Before you connect</h3>
         <p className="mt-2">
-          Keep Anki open with AnkiConnect installed. This app’s development proxy forwards requests to the local AnkiConnect service; a deployed app needs an equivalent trusted local/server proxy.
+          Keep Anki open with AnkiConnect installed. The development server forwards requests to AnkiConnect at 127.0.0.1:8765.
         </p>
       </section>
+      {import.meta.env.PROD && (
+        <section role="status" className="border border-amber-400/50 bg-amber-950/30 p-4 text-sm leading-6 text-amber-100 sm:p-5">
+          <h3 className="font-bold">Static GitHub Pages limitations</h3>
+          <p className="mt-2">
+            GitHub Pages cannot run the local API proxy. AnkiConnect and live dictionary lookup work when this app is run locally with <code>npm run dev</code>, not from this hosted page.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
