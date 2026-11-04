@@ -13,6 +13,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/jisho/, '/api/v1'),
       },
+      '/api/kanji-words': {
+        target: 'https://kanjiapi.dev',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/kanji-words/, '/v1/words'),
+      },
       '/api/kanji': {
         target: 'https://kanjiapi.dev',
         changeOrigin: true,

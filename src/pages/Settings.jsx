@@ -6,11 +6,13 @@ import {
   getModelFields,
 } from "../api/anki";
 import { useAppStore } from "../stores/appStore";
+import { useTranslation } from "react-i18next";
 
 const fieldClass =
   "mt-1 min-h-11 w-full border border-white/20 bg-[#202421] px-3 py-2 text-sm text-white outline-none focus:border-primary";
 
 function Settings() {
+  const { t } = useTranslation();
   const savedSettings = useAppStore((state) => state.ankiSettings);
   const setAnkiSettings = useAppStore((state) => state.setAnkiSettings);
   const setAnkiConnection = useAppStore((state) => state.setAnkiConnection);
@@ -22,6 +24,11 @@ function Settings() {
   const [message, setMessage] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const messageText = (value) => {
+    if (!value) return "";
+    if (typeof value === "string") return value;
+    return `${t(value.key, value.options)}${value.detail ? ` ${value.detail}` : ""}`;
+  };
 
   function updateSetting(name, value) {
     setSettings((current) => ({ ...current, [name]: value }));
@@ -61,11 +68,11 @@ function Settings() {
       }));
       setConnection("connected");
       setAnkiConnection("connected");
-      setMessage(`Connected to Anki · ${setup.decks.length} decks available.`);
+      setMessage({ key: "settings.decksFound", options: { count: setup.decks.length } });
     } catch (error) {
       setConnection("disconnected");
       setAnkiConnection("disconnected");
-      setMessage(error.message || "Could not connect to AnkiConnect.");
+      setMessage({ key: "settings.connectionError", detail: error.message });
     } finally {
       setIsChecking(false);
     }
@@ -94,17 +101,17 @@ function Settings() {
           : modelFields[1] || modelFields[0] || "",
       }));
     } catch (error) {
-      setMessage(error.message || "Could not load note type fields.");
+      setMessage({ key: "settings.fieldsError", detail: error.message });
     }
   }
 
   function saveSettings() {
     if (settings.frontField && settings.frontField === settings.backField) {
-      setMessage("Front and back fields must be different.");
+      setMessage({ key: "settings.fieldsDifferent" });
       return;
     }
     setAnkiSettings(settings);
-    setMessage("Anki settings saved.");
+    setMessage({ key: "settings.settingsSaved" });
   }
 
   async function makeNoteType() {
@@ -128,9 +135,9 @@ function Settings() {
       setAnkiSettings(nextSettings);
       setConnection("connected");
       setAnkiConnection("connected");
-      setMessage(created ? "JishoToAnki note type created and selected." : "JishoToAnki note type already exists.");
+      setMessage({ key: created ? "settings.noteTypeCreated" : "settings.noteTypeExists" });
     } catch (error) {
-      setMessage(error.message || "Could not create the JishoToAnki note type.");
+      setMessage({ key: "settings.createFailed", detail: error.message });
     } finally {
       setIsCreating(false);
     }
@@ -141,10 +148,10 @@ function Settings() {
       <section className="border border-yellow-200 bg-ldark p-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-primary">Preferences</p>
-            <h2 className="mt-2 text-2xl font-bold sm:text-3xl">Anki settings</h2>
+            <p className="text-xs uppercase tracking-[0.2em] text-primary">{t("settings.eyebrow")}</p>
+            <h2 className="mt-2 text-2xl font-bold sm:text-3xl">{t("settings.title")}</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-300">
-              Choose where dictionary cards go and map the fields in your Anki note type.
+              {t("settings.subtitle")}
             </p>
           </div>
           <button
@@ -154,7 +161,7 @@ function Settings() {
             className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 border border-primary px-3 py-2 text-sm text-primary hover:bg-primary hover:text-black disabled:opacity-60"
           >
             {isChecking ? <LoaderCircle size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-            {isChecking ? "Connecting..." : "Test connection"}
+            {isChecking ? t("settings.connecting") : t("settings.testConnection")}
           </button>
         </div>
 
@@ -171,12 +178,12 @@ function Settings() {
           {connection === "connected" ? <Check size={18} className="mt-0.5 shrink-0" /> : <CircleAlert size={18} className="mt-0.5 shrink-0" />}
           <div>
             <p className="font-bold">
-              {connection === "connected" ? "AnkiConnect is ready" : connection === "disconnected" ? "AnkiConnect is unavailable" : "Checking AnkiConnect"}
+              {connection === "connected" ? t("settings.connected") : connection === "disconnected" ? t("settings.disconnected") : t("settings.checking")}
             </p>
-            {message && <p className="mt-1 leading-5">{message}</p>}
+            {message && <p className="mt-1 leading-5">{messageText(message)}</p>}
             {connection === "disconnected" && (
               <p className="mt-1 leading-5">
-                Open Anki, install/enable the AnkiConnect add-on, then retry. The local proxy expects AnkiConnect at 127.0.0.1:8765.
+                {t("settings.setupHint")}
               </p>
             )}
           </div>
@@ -184,60 +191,60 @@ function Settings() {
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-gray-200">
-            Anki deck
+            {t("settings.deck")}
             <select
               value={settings.deck}
               onChange={(event) => updateSetting("deck", event.target.value)}
               disabled={!decks.length}
               className={fieldClass}
             >
-              <option value="">Select a deck</option>
+              <option value="">{t("settings.selectDeck")}</option>
               {decks.map((deck) => <option key={deck} value={deck}>{deck}</option>)}
             </select>
           </label>
 
           <label className="text-sm text-gray-200">
-            Note type
+            {t("settings.noteType")}
             <select
               value={settings.model}
               onChange={(event) => changeModel(event.target.value)}
               disabled={!models.length}
               className={fieldClass}
             >
-              <option value="">Select a note type</option>
+              <option value="">{t("settings.selectNoteType")}</option>
               {models.map((model) => <option key={model} value={model}>{model}</option>)}
             </select>
           </label>
 
           <label className="text-sm text-gray-200">
-            Front field
+            {t("settings.frontField")}
             {fields.length ? (
               <select value={settings.frontField} onChange={(event) => updateSetting("frontField", event.target.value)} className={fieldClass}>
                 {fields.map((field) => <option key={field} value={field}>{field}</option>)}
               </select>
             ) : (
-              <input value={settings.frontField} onChange={(event) => updateSetting("frontField", event.target.value)} className={fieldClass} placeholder="Front" />
+              <input value={settings.frontField} onChange={(event) => updateSetting("frontField", event.target.value)} className={fieldClass} placeholder={t("settings.frontField")} />
             )}
           </label>
 
           <label className="text-sm text-gray-200">
-            Back field
+            {t("settings.backField")}
             {fields.length ? (
               <select value={settings.backField} onChange={(event) => updateSetting("backField", event.target.value)} className={fieldClass}>
                 {fields.map((field) => <option key={field} value={field}>{field}</option>)}
               </select>
             ) : (
-              <input value={settings.backField} onChange={(event) => updateSetting("backField", event.target.value)} className={fieldClass} placeholder="Back" />
+              <input value={settings.backField} onChange={(event) => updateSetting("backField", event.target.value)} className={fieldClass} placeholder={t("settings.backField")} />
             )}
           </label>
 
           <label className="text-sm text-gray-200 sm:col-span-2">
-            Tags <span className="text-gray-500">(space-separated)</span>
+            {t("settings.tags")} <span className="text-gray-500">{t("settings.spaceSeparated")}</span>
             <input
               value={settings.tags}
               onChange={(event) => updateSetting("tags", event.target.value)}
               className={fieldClass}
-              placeholder="japanese jisho"
+              placeholder={t("settings.tagsPlaceholder")}
             />
           </label>
         </div>
@@ -248,7 +255,7 @@ function Settings() {
             onClick={saveSettings}
             className="min-h-11 bg-primary px-5 py-2 font-bold text-black hover:bg-yellow-300"
           >
-            Save settings
+            {t("settings.saveSettings")}
           </button>
           <button
             type="button"
@@ -257,24 +264,27 @@ function Settings() {
             className="inline-flex min-h-11 items-center justify-center gap-2 border border-white/25 px-5 py-2 text-sm text-gray-100 hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
           >
             <PlugZap size={16} />
-            {isCreating ? "Creating note type..." : "Create JishoToAnki note type"}
+            {isCreating ? t("settings.creatingNoteType") : t("settings.createNoteType")}
           </button>
         </div>
       </section>
 
       <section className="border border-white/15 bg-[#202421] p-4 text-sm leading-6 text-gray-300 sm:p-5">
-        <h3 className="font-bold text-white">Before you connect</h3>
+        <h3 className="font-bold text-white">{t("settings.connectIntro")}</h3>
         <p className="mt-2">
-          Keep Anki open with AnkiConnect installed. The development server forwards requests to AnkiConnect at 127.0.0.1:8765.
+          {t("settings.connectInstructions")}
+        </p>
+        <p className="mt-2">
+          {t("settings.syncInfo")}
         </p>
       </section>
       <section role="note" className="border border-amber-400/50 bg-amber-950/30 p-4 text-sm leading-6 text-amber-100 sm:p-5">
-          <h3 className="font-bold">Connect the hosted app to Anki</h3>
+          <h3 className="font-bold">{t("settings.hostedTitle")}</h3>
           <p className="mt-2">
-            GitHub Pages can connect directly to AnkiConnect on this computer. In Anki, open <strong>Tools → Add-ons → AnkiConnect → Config</strong> and add <code>https://ramexec.github.io</code> to the <code>webCorsOriginList</code> array. Save the config and restart Anki. Keep <code>webBindAddress</code> set to <code>127.0.0.1</code>; do not expose AnkiConnect to your network or the internet. Then return here, test the connection, and allow local-network access in your browser if prompted.
+            {t("settings.hostedInstructions")}
           </p>
           <p className="mt-2">
-            Kanji lookup works directly on the hosted site. Jisho word search still needs the local development proxy and is unavailable on the static hosted site.
+            {t("settings.hostedLookupInfo")}
           </p>
       </section>
     </div>

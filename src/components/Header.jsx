@@ -19,7 +19,7 @@ function Header() {
       <div className="flex items-center gap-2 sm:gap-3">
 
         <span className="text-xs text-primary sm:text-sm">
-          Language:
+          {t("header.language")}:
         </span>
 
         <select

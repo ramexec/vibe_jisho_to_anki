@@ -127,3 +127,113 @@ export async function addAnkiNote({
   if (!noteId) throw new Error("Anki did not add the card. It may already exist.");
   return noteId;
 }
+
+function getKanjiSyncTag(kanji) {
+  const codePoints = Array.from(kanji, (character) =>
+    character.codePointAt(0).toString(16),
+  );
+  return `jta_kanji_${codePoints.join("_")}`;
+}
+
+export async function saveKanjiToAnki({
+  kanji,
+  back,
+  deckName,
+  modelName,
+  frontField,
+  backField,
+  tags,
+}) {
+  if (!kanji || !/\p{Script=Han}/u.test(kanji)) {
+    throw new Error("Choose a kanji before syncing it to Anki.");
+  }
+  if (!deckName) throw new Error("Choose a deck in Settings before syncing.");
+  if (!modelName) throw new Error("Choose a note type in Settings before syncing.");
+  if (!frontField || !backField || frontField === backField) {
+    throw new Error("Choose different front and back fields in Settings.");
+  }
+
+  const syncTag = getKanjiSyncTag(kanji);
+  const fields = {
+    [frontField]: `<div class="jta-front">${escapeHtml(kanji)}</div>`,
+    [backField]: `<div class="jta-back">${escapeHtml(back).replace(/\n/g, "<br>")}</div>`,
+  };
+  const matchingNotes = await ankiRequest("findNotes", {
+    query: `tag:${syncTag}`,
+  });
+
+  if (matchingNotes.length > 1) {
+    throw new Error(`Anki has multiple cards for ${kanji}. Remove the duplicates in Anki, then retry.`);
+  }
+
+  if (matchingNotes.length === 1) {
+    const noteId = matchingNotes[0];
+    await ankiRequest("updateNoteFields", {
+      note: { id: noteId, fields },
+    });
+    return { noteId, created: false };
+  }
+
+  const noteId = await ankiRequest("addNote", {
+    note: {
+      deckName,
+      modelName,
+      fields,
+      tags: [...new Set([...String(tags || "").split(/\s+/).filter(Boolean), "jta_kanji", syncTag])],
+      options: { allowDuplicate: false },
+    },
+  });
+
+  if (!noteId) {
+    throw new Error("Anki did not add the card. Check for an existing duplicate and retry.");
+  }
+  return { noteId, created: true };
+}
+
+function plainText(value) {
+  return String(value || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(div|p|li)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+export async function syncKanjiFromAnki({ frontField, backField }) {
+  const noteIds = await ankiRequest("findNotes", {
+    query: "tag:jta_kanji",
+  });
+  if (!noteIds.length) return [];
+
+  const notes = await ankiRequest("notesInfo", { notes: noteIds });
+  return notes.flatMap((note) => {
+    const kanji = plainText(note.fields?.[frontField]?.value);
+    if (!kanji || !/\p{Script=Han}/u.test(kanji)) return [];
+    const back = plainText(note.fields?.[backField]?.value);
+    const section = (name) => {
+      const match = back.match(
+        new RegExp(`(?:^|\\n)${name}\\s*\\n([\\s\\S]*?)(?=\\n\\n[A-Z][A-Z' /]+(?::|\\n)|$)`),
+      );
+      return match?.[1]?.trim() || "";
+    };
+    const readings = [
+      section("ON'YOMI"),
+      section("KUN'YOMI"),
+    ].filter(Boolean);
+    return [{
+      slug: `kanji-${kanji}`,
+      word: kanji,
+      reading: readings.join(", "),
+      meaning: section("MEANING") || back || "Synced from Anki",
+      ankiNoteId: note.noteId,
+      ankiSyncedAt: new Date().toISOString(),
+      source: "anki",
+    }];
+  });
+}

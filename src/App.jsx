@@ -4,6 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Dictionary from "./pages/Dictionary";
 import Vocabulary from "./pages/Vocabulary";
 import Settings from "./pages/Settings";
+import Explorer from "./pages/Explorer";
 
 import { useAppStore } from "./stores/appStore";
 
@@ -23,7 +24,8 @@ function App() {
           {activePage === "dictionary" && <Dictionary />}
           {activePage === "vocabulary" && <Vocabulary />}
           {activePage === "settings" && <Settings />}
-          {!["dashboard", "dictionary", "vocabulary", "settings"].includes(activePage) && (
+          {activePage === "explorer" && <Explorer />}
+          {!["dashboard", "dictionary", "vocabulary", "settings", "explorer"].includes(activePage) && (
             <div className="font-mono text-white">
               <h2 className="text-2xl font-semibold capitalize">
                 {activePage}
