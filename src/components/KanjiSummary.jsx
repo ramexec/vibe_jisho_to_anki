@@ -1,8 +1,70 @@
-import { ArrowUpRight, BookOpen } from "lucide-react";
+import { useState } from "react";
+import { ArrowUpRight, BookOpen, BookmarkCheck, BookmarkPlus, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { saveKanjiToAnki } from "../api/anki";
+import { useAppStore } from "../stores/appStore";
+import { toast } from "sonner";
 
 function KanjiSummary({ entry }) {
   const { t } = useTranslation();
+  const savedWords = useAppStore((state) => state.savedWords);
+  const saveWord = useAppStore((state) => state.saveWord);
+  const ankiSettings = useAppStore((state) => state.ankiSettings);
+  const setAnkiConnection = useAppStore((state) => state.setAnkiConnection);
+  const [isSaving, setIsSaving] = useState(false);
+  const savedEntry = savedWords.find((word) => word.slug === `kanji-${entry.character}`);
+  const kanji = entry.character;
+
+  async function saveToAnki() {
+    if (isSaving) return;
+    setIsSaving(true);
+    const savedKanji = {
+      slug: `kanji-${kanji}`,
+      word: kanji,
+      reading: [
+        entry.on.length ? `ON'YOMI: ${entry.on.join(", ")}` : "",
+        entry.kun.length ? `KUN'YOMI: ${entry.kun.join(", ")}` : "",
+      ].filter(Boolean).join("; "),
+      meaning: entry.meanings.join(", "),
+      source: "KANJIDIC2",
+    };
+    saveWord(savedKanji);
+
+    const examples = entry.examples.map((word) => {
+      const written = word.exampleWord || word.k[0] || word.r[0];
+      return `${written} (${word.r[0] || ""}): ${word.s.slice(0, 2).flatMap((sense) => sense.g).join("; ")}`;
+    });
+    const back = [
+      `MEANING\n${entry.meanings.join(", ") || t("dictionary.noMeaning")}`,
+      entry.on.length ? `ON'YOMI\n${entry.on.join(", ")}` : "",
+      entry.kun.length ? `KUN'YOMI\n${entry.kun.join(", ")}` : "",
+      examples.length ? `EXAMPLE WORDS\n${examples.join("\n")}` : "",
+    ].filter(Boolean).join("\n\n");
+
+    try {
+      const result = await saveKanjiToAnki({
+        kanji,
+        back,
+        deckName: ankiSettings.deck,
+        modelName: ankiSettings.model,
+        frontField: ankiSettings.frontField,
+        backField: ankiSettings.backField,
+        tags: ankiSettings.tags,
+      });
+      saveWord({
+        ...savedKanji,
+        ankiNoteId: result.noteId,
+        ankiSyncedAt: new Date().toISOString(),
+      });
+      setAnkiConnection("connected");
+      toast.success(t(result.created ? "dictionary.kanjiAdded" : "dictionary.kanjiUpdated", { id: result.noteId }));
+    } catch (error) {
+      setAnkiConnection("disconnected");
+      toast.error(t("dictionary.kanjiSyncFailed", { error: error.message }));
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <section className="min-w-0 border border-yellow-200/70 bg-ldark p-4 sm:p-6">
@@ -72,6 +134,23 @@ function KanjiSummary({ entry }) {
           ) : (
             <p className="text-sm text-gray-400">{t("dictionary.noExamples")}</p>
           )}
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-white/15 pt-5 sm:flex-row">
+          <button
+            type="button"
+            onClick={saveToAnki}
+            disabled={isSaving}
+            className="inline-flex min-h-10 items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300 disabled:cursor-wait disabled:opacity-60"
+          >
+            {isSaving ? <LoaderCircle size={16} className="animate-spin" /> : savedEntry ? <BookmarkCheck size={16} /> : <BookmarkPlus size={16} />}
+            {isSaving
+              ? t("dictionary.savingSyncing")
+              : savedEntry?.ankiNoteId
+                ? t("dictionary.kanjiSyncAction")
+                : t("dictionary.kanjiSaveAction")}
+          </button>
+          {savedEntry && !isSaving && <span className="self-center text-xs text-gray-400">{t("dictionary.saved")}</span>}
         </div>
       </div>
     </section>
