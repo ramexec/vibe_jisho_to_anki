@@ -10,22 +10,22 @@ function Header() {
   };
 
   return (
-    <header className="h-[50px] px-9 flex items-center justify-between bg-header border-b border-yellow-200 ">
+    <header className="flex min-h-[50px] flex-wrap items-center justify-between gap-2 border-b border-yellow-200 bg-header px-4 py-2 sm:px-6 md:px-9">
 
-      <h1 className="text-xl font-semibold text-white">
+      <h1 className="text-lg font-semibold text-white sm:text-xl">
         {t(`navigation.${activePage}`)}
       </h1>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
 
-        <span className="text-sm text-primary">
+        <span className="text-xs text-primary sm:text-sm">
           Language:
         </span>
 
         <select
           value={i18n.resolvedLanguage || "en"}
           onChange={(e) => changeLanguage(e.target.value)}
-          className="border border-yellow rounded-sm px-2 py-0.5 text text-sm bg-white outline-none focus:ring-2"
+          className="rounded-sm border border-yellow bg-white px-2 py-1 text-sm outline-none focus:ring-2"
         >
           <option value="en">English</option>
           <option value="ja">日本語</option>
