@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS === 'true' ? '/jisho_to_anki/' : '/',
+  base: process.env.GITHUB_ACTIONS === 'true' ? '/vibe_jisho_to_anki/' : '/',
   plugins: [react(),tailwindcss()],
   server: {
     proxy: {
