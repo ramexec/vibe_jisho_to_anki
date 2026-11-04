@@ -9,7 +9,6 @@ export const useAppStore = create(
       searchQuery: "",
       savedWords: [],
       searchHistory: [],
-      dailyGoal: 20,
 
       setActivePage: (page) => set({ activePage: page }),
       setSearchQuery: (query) => set({ searchQuery: query }),
@@ -37,8 +36,6 @@ export const useAppStore = create(
             (word) => word.slug !== slug
           ),
         })),
-
-      setDailyGoal: (goal) => set({ dailyGoal: goal }),
     }),
     {
       name: "jishotoanki-storage",

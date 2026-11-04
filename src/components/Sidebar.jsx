@@ -10,16 +10,14 @@ function Sidebar() {
   const pages = [
     { id: "dashboard", label: t("navigation.dashboard") },
     { id: "dictionary", label: t("navigation.dictionary") },
-    { id: "kanji", label: t("navigation.kanji") },
-    { id: "vocabulary", label: t("navigation.vocabulary") },
-    { id: "study", label: t("navigation.study") },
+    { id: "explorer", label: t("navigation.explorer") },
     { id: "settings", label: t("navigation.settings") },
   ];
 
   return (
-    <aside className="w-64 min-h-screen bg-[#292a26] text-white p-5">
-      <h2 className="text-2xl font-bold mb-10">
-        JishoToAnki
+    <aside className="w-45 min-h-screen bg-[#292a26] text-white p-5 font-mono">
+      <h2 className="text-xl font-bold  mb-10">
+        Jisho_To_Anki
       </h2>
 
       <nav className="flex flex-col gap-2">
@@ -27,7 +25,7 @@ function Sidebar() {
           <button
             key={page.id}
             onClick={() => setActivePage(page.id)}
-            className={`text-left px-4 py-3 rounded-lg transition-colors
+            className={`text-left px-3  rounded-sm transition-colors
               ${
                 activePage === page.id
                   ? "bg-[#494a44] text-white"

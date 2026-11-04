@@ -3,9 +3,16 @@
 
 @import "tailwindcss";
 
+
+@theme {
+  --color-primary: #FFFF00; 
+  --color-header: #035153; 
+  --color-ldark: #003536;
+}
+
+
 :root {
   font-family: "DM Sans", sans-serif;
-  color: #252622;
   background: #faf9f6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
