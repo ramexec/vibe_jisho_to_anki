@@ -15,7 +15,7 @@ A Japanese-learning companion for looking up words and kanji, keeping a personal
 
 ## Get started on the hosted app
 
-1. Open the [Jisho to Anki app](https://ramexec.github.io/jisho_to_anki/).
+1. Open the [Jisho to Anki app](https://ramexec.github.io/vibe_jisho_to_anki/).
 2. Search in **Dictionary** or find kanji compounds in **Explorer**. Use **Open on Jisho** for the corresponding Jisho page.
 3. Use **Vocabulary** to add and manage your own saved words. Your list is stored in this browser.
 4. To add cards to Anki, follow [Connect Anki from the hosted app](#connect-anki-from-the-hosted-app) below.
