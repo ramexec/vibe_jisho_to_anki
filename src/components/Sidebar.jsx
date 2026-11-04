@@ -16,12 +16,12 @@ function Sidebar() {
   ];
 
   return (
-    <aside className="w-full shrink-0 bg-[#292a26] p-3 font-mono text-white md:min-h-screen md:w-45 md:p-5">
-      <h2 className="mb-3 text-base font-bold sm:text-xl md:mb-10">
+    <aside className="fixed left-0 top-0 z-30 flex h-14 w-full shrink-0 items-center gap-3 bg-[#292a26] px-3 font-mono text-white md:inset-y-0 md:right-auto md:h-screen md:w-45 md:flex-col md:items-stretch md:gap-0 md:p-5">
+      <h2 className="shrink-0 text-sm font-bold sm:text-base md:mb-10 md:text-xl">
         Jisho_To_Anki
       </h2>
 
-      <nav className="flex gap-2 overflow-x-auto md:flex-col">
+      <nav className="flex min-w-0 flex-1 gap-2 overflow-x-auto md:flex-col md:overflow-visible">
         {pages.map((page) => (
           <button
             key={page.id}
@@ -30,7 +30,7 @@ function Sidebar() {
               ${
                 activePage === page.id
                   ? "bg-[#494a44] text-white"
-                  : "text-gray-400 hover:bg-[#3b3c37] hover:text-white"
+                  : "text-gray-400 hover:bg-[#3b3c37] hover:text-yellow-200"
               }`}
           >
             {page.label}

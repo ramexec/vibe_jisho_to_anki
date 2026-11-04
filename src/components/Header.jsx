@@ -10,13 +10,13 @@ function Header() {
   };
 
   return (
-    <header className="flex min-h-[50px] flex-wrap items-center justify-between gap-2 border-b border-yellow-200 bg-header px-4 py-2 sm:px-6 md:px-9">
+    <header className="fixed left-0 top-14 z-20 flex h-14 w-full flex-nowrap items-center justify-between gap-2 border-b border-yellow-200 bg-header px-4 sm:px-6 md:left-45 md:top-0 md:w-[calc(100%-11.25rem)] md:px-9">
 
-      <h1 className="text-lg font-semibold text-white sm:text-xl">
+      <h1 className="min-w-0 truncate text-lg font-semibold text-white sm:text-xl">
         {t(`navigation.${activePage}`)}
       </h1>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
 
         <span className="text-xs text-primary sm:text-sm">
           {t("header.language")}:

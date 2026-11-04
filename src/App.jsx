@@ -13,13 +13,12 @@ function App() {
   const activePage = useAppStore((state) => state.activePage);
   return (
     <div className="flex min-h-screen flex-col bg-black md:flex-row">
-      
       <Sidebar />
 
-      <main className="flex-1 min-w-0">
+      <main className="min-h-screen w-full min-w-0 flex-1 bg-[#101311] md:ml-45">
         <Header />
 
-        <section className="p-3 sm:p-5">
+        <section className="min-h-screen px-4 pb-8 pt-32 sm:px-6 sm:pb-10 md:px-8 md:pt-20 lg:px-10">
           {activePage === "dashboard" && <Dashboard />}
           {activePage === "dictionary" && <Dictionary />}
           {activePage === "vocabulary" && <Vocabulary />}
