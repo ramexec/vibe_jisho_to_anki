@@ -126,16 +126,28 @@ const jishoCardCss = `
   background: transparent;
   box-shadow: none;
 }
-.jta-section + .jta-section {
-  margin-top: 1.25rem;
-  padding-top: 1.15rem;
-  border-top: 1px solid rgba(47, 72, 61, 0.12);
+.jta-section {
+  margin-top: 0.8rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(47, 72, 61, 0.1);
+  border-radius: 12px;
+  background: rgba(243, 242, 235, 0.62);
+}
+.jta-section:first-child {
+  margin-top: 0;
+}
+.jta-section.jta-section-compact {
+  display: inline-block;
+  width: calc(50% - 0.45rem);
+  min-height: 100px;
+  margin: 0.25rem 0.45rem 0.25rem 0;
+  vertical-align: top;
 }
 .jta-section-title {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin: 0 0 0.7rem;
+  margin: 0 0 0.5rem;
   color: #78877b;
   font-size: 0.7rem;
   font-weight: 800;
@@ -165,45 +177,47 @@ const jishoCardCss = `
   font-family: "Noto Serif JP", "Yu Mincho", serif;
   font-size: 1.05em;
 }
-.jta-sense + .jta-sense,
-.jta-example + .jta-example {
-  margin-top: 0.8rem;
+.jta-meaning-text {
+  margin: 0;
+  line-height: 1.65;
 }
-.jta-pos {
-  display: inline-block;
-  margin-bottom: 0.3rem;
-  color: #77877b;
-  font-size: 0.78em;
+.jta-meaning-pos {
+  color: #78877b;
+  font-size: 0.8em;
   font-weight: 700;
 }
-.jta-meaning-list {
+.jta-example-list {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-left: 1.6rem;
 }
-.jta-meaning-list li + li {
-  margin-top: 0.15rem;
+.jta-example-item {
+  padding-left: 0.2rem;
 }
-.jta-example {
-  display: grid;
-  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-  gap: 0.15rem 0.9rem;
+.jta-example-item + .jta-example-item {
+  margin-top: 0.65rem;
+}
+.jta-example-japanese {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.65rem;
   align-items: baseline;
 }
 .jta-example-word {
   overflow-wrap: anywhere;
   color: #34443c;
   font-family: "Noto Serif JP", "Yu Mincho", serif;
-  font-size: 1.2em;
+  font-size: 1.13em;
   font-weight: 600;
 }
 .jta-example-reading {
   color: #78877b;
-  font-size: 0.85em;
+  font-size: 0.9em;
 }
-.jta-example-meanings {
-  grid-column: 1 / -1;
+.jta-example-meaning {
+  margin: 0.12rem 0 0;
   color: #56665d;
   font-size: 0.92em;
+  line-height: 1.55;
 }
 .jta-empty {
   margin: 0;
@@ -238,13 +252,17 @@ const jishoCardCss = `
 .card.nightMode .jta-front::before {
   color: #aab8aa;
 }
-.card.nightMode .jta-section + .jta-section {
-  border-top-color: rgba(226, 232, 221, 0.13);
+.card.nightMode .jta-section {
+  border-color: rgba(226, 232, 221, 0.1);
+  background: rgba(48, 59, 52, 0.48);
 }
 .card.nightMode .jta-section-title,
-.card.nightMode .jta-pos,
+.card.nightMode .jta-meaning-pos,
 .card.nightMode .jta-example-reading {
   color: #aab8aa;
+}
+.card.nightMode .jta-meaning-text {
+  color: #e7e5dc;
 }
 .card.nightMode .jta-reading {
   border-color: rgba(226, 232, 221, 0.13);
@@ -254,7 +272,7 @@ const jishoCardCss = `
 .card.nightMode .jta-example-word {
   color: #e7e5dc;
 }
-.card.nightMode .jta-example-meanings {
+.card.nightMode .jta-example-meaning {
   color: #c1c9c0;
 }
 .card.nightMode .jta-empty {
@@ -338,40 +356,42 @@ function renderBackSections(sections) {
       } else if (section.type === "meanings") {
         content = items.map((item) => {
           if (typeof item === "string") {
-            return `<div class="jta-sense"><ul class="jta-meaning-list"><li>${escapeHtml(item)}</li></ul></div>`;
+            return `<p class="jta-meaning-text">${escapeHtml(item)}</p>`;
           }
           const parts = Array.isArray(item.parts) ? item.parts.filter(Boolean) : [];
           const meanings = Array.isArray(item.meanings) ? item.meanings.filter(Boolean) : [];
-          return `<div class="jta-sense">${parts.length
-            ? `<div class="jta-pos">${escapeHtml(parts.join(", "))}</div>`
-            : ""}${meanings.length
-            ? `<ul class="jta-meaning-list">${meanings.map((meaning) =>
-              `<li>${escapeHtml(meaning)}</li>`,
-            ).join("")}</ul>`
-            : `<p class="jta-empty">${emptyText}</p>`}</div>`;
+          if (!meanings.length) return `<p class="jta-empty">${emptyText}</p>`;
+          return `<p class="jta-meaning-text">${parts.length
+            ? `<span class="jta-meaning-pos">${escapeHtml(parts.join(", "))}: </span>`
+            : ""}${meanings.map(escapeHtml).join(", ")}</p>`;
         }).join("");
+      } else if (section.type === "meaning-list") {
+        content = `<p class="jta-meaning-text">${items.map(escapeHtml).join(", ")}</p>`;
       } else if (section.type === "examples") {
-        content = items.map((item) => {
+        const examples = items.map((item) => {
           const word = String(item.word || "").trim();
           if (!word) return "";
           const reading = String(item.reading || "").trim();
           const meanings = Array.isArray(item.meanings)
             ? item.meanings.filter(Boolean)
             : [];
-          return `<div class="jta-example"><span class="jta-example-word">${escapeHtml(word)}</span>${reading
+          return `<li class="jta-example-item"><div class="jta-example-japanese"><span class="jta-example-word">${escapeHtml(word)}</span>${reading
             ? `<span class="jta-example-reading">${escapeHtml(reading)}</span>`
-            : ""}${meanings.length
-            ? `<span class="jta-example-meanings">${meanings.map(escapeHtml).join("; ")}</span>`
-            : ""}</div>`;
+            : ""}</div><p class="jta-example-meaning">${meanings.length
+              ? meanings.map(escapeHtml).join(", ")
+              : emptyText}</p></li>`;
         }).join("");
-        if (!content) content = `<p class="jta-empty">${emptyText}</p>`;
+        content = examples
+          ? `<ol class="jta-example-list">${examples}</ol>`
+          : `<p class="jta-empty">${emptyText}</p>`;
       } else {
-        content = `<ul class="jta-meaning-list">${items.map((item) =>
+        content = `<ul>${items.map((item) =>
           `<li>${escapeHtml(item)}</li>`,
         ).join("")}</ul>`;
       }
 
-      return `<section class="jta-section"><h3 class="jta-section-title">${title}</h3>${content}</section>`;
+      const compactClass = section.compact ? " jta-section-compact" : "";
+      return `<section class="jta-section${compactClass}"><h3 class="jta-section-title">${title}</h3>${content}</section>`;
     }).join("");
 }
 

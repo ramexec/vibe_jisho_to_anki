@@ -50,7 +50,7 @@ function KanjiSummary({ entry }) {
     const backSections = [
       {
         title: "MEANING",
-        type: "meanings",
+        type: "meaning-list",
         items: meanings,
         emptyText: t("dictionary.noMeaning"),
       },
@@ -59,12 +59,14 @@ function KanjiSummary({ entry }) {
         type: "readings",
         items: onYomi,
         emptyText: t("explorer.noReadings"),
+        compact: true,
       },
       {
         title: "KUN'YOMI",
         type: "readings",
         items: kunYomi,
         emptyText: t("explorer.noReadings"),
+        compact: true,
       },
       {
         title: "EXAMPLE WORDS",
