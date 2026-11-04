@@ -11,6 +11,8 @@ node_modules
 dist
 dist-ssr
 *.local
+public/data/jmdict/index.json.gz.data
+public/data/kanjidic2/index.json.gz.data
 
 # Editor directories and files
 .vscode/*
