@@ -428,6 +428,90 @@ export async function addAnkiNote({
   return noteId;
 }
 
+function getWordSyncTag(slug) {
+  const codePoints = Array.from(slug, (character) =>
+    character.codePointAt(0).toString(16),
+  );
+  return `jta_word_${codePoints.join("_")}`;
+}
+
+export async function saveWordToAnki({
+  slug,
+  deckName,
+  modelName,
+  frontField,
+  backField,
+  front,
+  backSections,
+  tags,
+}) {
+  if (!slug || !front) throw new Error("Choose a word before syncing it to Anki.");
+  if (!deckName) throw new Error("Choose a deck in Settings before syncing.");
+  if (!modelName) throw new Error("Choose a note type in Settings before syncing.");
+  if (!frontField || !backField || frontField === backField) {
+    throw new Error("Choose different front and back fields in Settings.");
+  }
+
+  const syncTag = getWordSyncTag(slug);
+  const fields = {
+    [frontField]: `<div class="jta-front">${escapeHtml(front)}</div>`,
+    [backField]: `<div class="jta-back">${renderBackSections(backSections)}</div>`,
+  };
+  const taggedNotes = await ankiRequest("findNotes", {
+    query: `tag:${syncTag}`,
+  });
+
+  if (taggedNotes.length > 1) {
+    throw new Error(`Anki has multiple cards for ${front}. Remove the duplicates in Anki, then retry.`);
+  }
+
+  let noteId = taggedNotes[0];
+  if (!noteId) {
+    const legacyNoteIds = await ankiRequest("findNotes", {
+      query: `${frontField}:${JSON.stringify(front)}`,
+    });
+    if (legacyNoteIds.length) {
+      const notes = await ankiRequest("notesInfo", { notes: legacyNoteIds });
+      const matchingNotes = notes.filter((note) =>
+        note.modelName === modelName &&
+        plainText(note.fields?.[frontField]?.value) === front
+      );
+      if (matchingNotes.length > 1) {
+        throw new Error(`Anki has multiple cards for ${front}. Remove the duplicates in Anki, then retry.`);
+      }
+      noteId = matchingNotes[0]?.noteId;
+      if (noteId) {
+        await ankiRequest("addTags", {
+          notes: [noteId],
+          tags: syncTag,
+        });
+      }
+    }
+  }
+
+  if (noteId) {
+    await ankiRequest("updateNoteFields", {
+      note: { id: noteId, fields },
+    });
+    return { noteId, created: false };
+  }
+
+  noteId = await ankiRequest("addNote", {
+    note: {
+      deckName,
+      modelName,
+      fields,
+      tags: [...new Set([...String(tags || "").split(/\s+/).filter(Boolean), syncTag])],
+      options: { allowDuplicate: false },
+    },
+  });
+
+  if (!noteId) {
+    throw new Error("Anki did not add the card. Check for an existing duplicate and retry.");
+  }
+  return { noteId, created: true };
+}
+
 function getKanjiSyncTag(kanji) {
   const codePoints = Array.from(kanji, (character) =>
     character.codePointAt(0).toString(16),

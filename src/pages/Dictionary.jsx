@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowUpRight, BookmarkCheck, BookmarkPlus, BookOpen, Clock3, LoaderCircle, Search } from "lucide-react";
-import { addAnkiNote } from "../api/anki";
+import { saveWordToAnki } from "../api/anki";
 import { searchDictionary, searchKanjiEntry } from "../api/localDictionary";
 import DictionaryAttribution from "../components/DictionaryAttribution";
 import KanjiSummary from "../components/KanjiSummary";
@@ -46,7 +46,7 @@ function Dictionary() {
   const selectedSlug = selected
     ? `jmdict-${selectedWord}-${selectedReadings[0] || ""}`
     : "";
-  const isSaved = savedWords.some((word) => word.slug === selectedSlug);
+  const savedEntry = savedWords.find((word) => word.slug === selectedSlug);
   const jishoUrl = `https://jisho.org/search/${encodeURIComponent(query.trim())}`;
   const detailJishoUrl = `https://jisho.org/search/${encodeURIComponent(selectedWord || query.trim())}`;
 
@@ -100,21 +100,17 @@ function Dictionary() {
     }
   }
 
-  function saveSelected() {
-    if (!selected) return;
-    saveWord({
+  async function saveSelectedToAnki() {
+    if (!selected || isAdding) return;
+    setIsAdding(true);
+    const savedWord = {
       slug: selectedSlug,
       word: selectedWord,
       reading: selectedReadings.join(", "),
       meaning: getMeaning(selected),
       source: "JMdict",
-    });
-    toast.success(t("dictionary.saved"));
-  }
-
-  async function addSelectedToAnki() {
-    if (!selected) return;
-    setIsAdding(true);
+    };
+    saveWord(savedWord);
     const backSections = [
       {
         title: "READINGS",
@@ -137,7 +133,8 @@ function Dictionary() {
     ];
 
     try {
-      const noteId = await addAnkiNote({
+      const result = await saveWordToAnki({
+        slug: selectedSlug,
         deckName: ankiSettings.deck,
         modelName: ankiSettings.model,
         frontField: ankiSettings.frontField,
@@ -146,16 +143,23 @@ function Dictionary() {
         backSections,
         tags: ankiSettings.tags || "",
       });
+      const ankiSyncedAt = new Date().toISOString();
       recordAddedCard({
         front: selectedWord,
         source: query,
-        noteId,
-        addedAt: new Date().toISOString(),
+        noteId: result.noteId,
+        addedAt: ankiSyncedAt,
+      });
+      saveWord({
+        ...savedWord,
+        ankiNoteId: result.noteId,
+        ankiSyncedAt,
       });
       setAnkiConnection("connected");
-      toast.success(t("dictionary.added", { id: noteId }));
+      toast.success(t(result.created ? "dictionary.wordAdded" : "dictionary.wordUpdated", { id: result.noteId }));
     } catch (requestError) {
-      toast.error(`${t("dictionary.addFailed")} ${requestError.message}`);
+      setAnkiConnection("disconnected");
+      toast.error(t("dictionary.wordSyncFailed", { error: requestError.message }));
     } finally {
       setIsAdding(false);
     }
@@ -300,22 +304,22 @@ function Dictionary() {
               <div className="mt-6 flex flex-col gap-2 border-t border-white/15 pt-5 sm:flex-row">
                 <button
                   type="button"
-                  onClick={saveSelected}
-                  disabled={isSaved}
-                  className="inline-flex min-h-10 items-center justify-center gap-2 border border-primary px-3 py-2 text-sm text-primary hover:bg-primary hover:text-black disabled:border-white/20 disabled:text-gray-400 disabled:hover:bg-transparent"
-                >
-                  {isSaved ? <BookmarkCheck size={16} /> : <BookmarkPlus size={16} />}
-                  {isSaved ? t("dictionary.saved") : t("dictionary.saveWord")}
-                </button>
-                <button
-                  type="button"
-                  onClick={addSelectedToAnki}
+                  onClick={saveSelectedToAnki}
                   disabled={isAdding}
                   className="inline-flex min-h-10 items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300 disabled:cursor-wait disabled:opacity-60"
                 >
-                  {isAdding && <LoaderCircle size={16} className="animate-spin" />}
-                  {isAdding ? t("dictionary.addingToAnki") : t("dictionary.addToAnki")}
+                  {isAdding
+                    ? <LoaderCircle size={16} className="animate-spin" />
+                    : savedEntry?.ankiNoteId
+                      ? <BookmarkCheck size={16} />
+                      : <BookmarkPlus size={16} />}
+                  {isAdding
+                    ? t("dictionary.savingWordSyncing")
+                    : savedEntry?.ankiNoteId
+                      ? t("dictionary.updateWordAndAnki")
+                      : t("dictionary.saveWordAndAnki")}
                 </button>
+                {savedEntry && !isAdding && <span className="self-center text-xs text-gray-400">{t("dictionary.saved")}</span>}
               </div>
             </section>
           )}

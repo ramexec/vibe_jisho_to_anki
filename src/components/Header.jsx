@@ -1,5 +1,6 @@
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "react-i18next";
+import { Coffee } from "lucide-react";
 
 function Header() {
   const activePage = useAppStore((state) => state.activePage);
@@ -17,6 +18,16 @@ function Header() {
       </h1>
 
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <a
+          href="https://buymeacoffee.com/ramexec"
+          target="_blank"
+          rel="noreferrer"
+          aria-label={t("header.donate")}
+          className="inline-flex min-h-9 items-center gap-1 border border-white/25 px-2 text-xs text-white transition-colors hover:border-primary hover:text-primary sm:gap-1.5 sm:px-2.5"
+        >
+          <Coffee size={14} />
+          <span className="hidden sm:inline">{t("header.donate")}</span>
+        </a>
 
         <span className="text-xs text-primary sm:text-sm">
           {t("header.language")}:
