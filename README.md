@@ -28,7 +28,7 @@ AnkiConnect runs on your own computer. The hosted app sends requests from your b
 2. In Anki, open **Tools → Add-ons**, select **AnkiConnect**, choose **Config**, and add `"https://ramexec.github.io"` to the `webCorsOriginList` array. Keep any existing allowed origins.
 3. Leave `webBindAddress` set to `"127.0.0.1"`. Do not change it to `0.0.0.0` or expose AnkiConnect to your network or the internet.
 4. Save the config and restart Anki.
-5. In the app, open **Settings**, test the connection, choose a deck and note type, map the front and back fields, and save. Approve the browser's local-network permission if prompted.
+5. In the app, open **Settings**, test the connection, choose a deck and note type, map the front and back fields, and save. Use **Create / refresh JishoToAnki note type** to apply the app's card styling. Approve the browser's local-network permission if prompted.
 6. In **Explorer**, use **Sync kanji from Anki** to import the tagged kanji notes into this browser.
 
 Browser support and local-network permission prompts may vary. If the connection fails, confirm that Anki is running, AnkiConnect is enabled, the site origin is in `webCorsOriginList`, and Anki has been restarted.
