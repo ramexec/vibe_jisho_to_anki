@@ -7,8 +7,8 @@ import {
   Clock3,
   Search,
 } from "lucide-react";
-import { lookupKanji, searchJisho } from "../api/jisho";
-import { addAnkiNote, saveKanjiToAnki } from "../api/anki";
+import { searchJisho } from "../api/jisho";
+import { addAnkiNote } from "../api/anki";
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -38,7 +38,6 @@ function Dictionary() {
   const [query, setQuery] = useState(searchQuery);
   const [entries, setEntries] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [kanjiEntry, setKanjiEntry] = useState(null);
   const [exampleSentence, setExampleSentence] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -76,19 +75,12 @@ function Dictionary() {
     setError("");
     setEntries([]);
     setSelected(null);
-    setKanjiEntry(null);
     setExampleSentence("");
     const currentRequestId = ++requestId.current;
     useAppStore.getState().setSearchQuery(trimmedQuery);
     addToHistory(trimmedQuery);
 
     try {
-      if ([...trimmedQuery].length === 1 && /[\u3400-\u9fff々〆ヶ]/u.test(trimmedQuery)) {
-        const result = await lookupKanji(trimmedQuery);
-        if (currentRequestId !== requestId.current) return;
-        setKanjiEntry(result);
-        return;
-      }
       const results = await searchJisho(trimmedQuery);
       if (currentRequestId !== requestId.current) return;
       setEntries(results);
@@ -96,7 +88,9 @@ function Dictionary() {
       if (!results.length) setError({ key: "dictionary.noResults", options: { query: trimmedQuery } });
     } catch (requestError) {
       if (currentRequestId === requestId.current) {
-        toast.error(messageText({ key: "dictionary.fallbackError", detail: requestError.message }));
+        setError(import.meta.env.PROD
+          ? { key: "dictionary.hostedSearchUnavailable" }
+          : { key: "dictionary.fallbackError", detail: requestError.message });
       }
     } finally {
       if (currentRequestId === requestId.current) setIsLoading(false);
@@ -104,16 +98,6 @@ function Dictionary() {
   }
 
   function saveSelected() {
-    if (kanjiEntry) {
-      saveWord({
-        slug: `kanji-${query}`,
-        word: query,
-        reading: [...(kanjiEntry.on_readings || []), ...(kanjiEntry.kun_readings || [])].join(", "),
-        meaning: kanjiEntry.meanings?.join(", ") || t("dictionary.noMeaning"),
-      });
-      toast.success(t("dictionary.saved"));
-      return;
-    }
     if (!selected) return;
     const japanese = getJapanese(selected);
     saveWord({
@@ -127,73 +111,19 @@ function Dictionary() {
   }
 
   async function addSelectedToAnki() {
-    const front = kanjiEntry ? query : selectedJapanese.word || selectedJapanese.reading || query;
-    if (!front || (!kanjiEntry && !selected)) return;
+    if (!selected) return;
 
-    const meanings = kanjiEntry
-      ? [
-          `MEANING\n${kanjiEntry.meanings?.join(", ") || "—"}`,
-          `ON'YOMI\n${kanjiEntry.on_readings?.join("、") || "—"}`,
-          `KUN'YOMI\n${kanjiEntry.kun_readings?.join("、") || "—"}`,
-          `STROKES: ${kanjiEntry.stroke_count ?? "—"} · GRADE: ${kanjiEntry.grade ?? "—"} · JLPT: ${kanjiEntry.jlpt ?? "—"}`,
-          `WORDS USING THIS KANJI\n${(kanjiEntry.examples || []).slice(0, 12).map((word) =>
-            `${word.japanese || ""}${word.readings?.length ? `（${word.readings.join("、")}）` : ""} — ${(word.meanings || []).join(", ")}`
-          ).join("\n") || "No example words supplied."}`,
-        ]
-      : [
-          `READING\n${[...new Set((selected.japanese || []).map((item) => item.reading).filter(Boolean))].join("、") || "—"}`,
-          `MEANING\n${selected.senses?.map((sense) => sense.english_definitions?.join(", ")).filter(Boolean).join("; ") || "—"}`,
-          `PART OF SPEECH\n${[...new Set((selected.senses || []).flatMap((sense) => sense.parts_of_speech || []))].join(", ") || "—"}`,
-          `TAGS\n${selected.tags?.join(", ") || "—"}`,
-        ];
+    const front = selectedJapanese.word || selectedJapanese.reading || query;
+    const meanings = [
+      `READING\n${[...new Set((selected.japanese || []).map((item) => item.reading).filter(Boolean))].join("、") || "—"}`,
+      `MEANING\n${selected.senses?.map((sense) => sense.english_definitions?.join(", ")).filter(Boolean).join("; ") || "—"}`,
+      `PART OF SPEECH\n${[...new Set((selected.senses || []).flatMap((sense) => sense.parts_of_speech || []))].join(", ") || "—"}`,
+      `TAGS\n${selected.tags?.join(", ") || "—"}`,
+    ];
     const back = [...meanings, ...(exampleSentence.trim() ? [`EXAMPLE SENTENCE\n${exampleSentence.trim()}`] : [])].join("\n\n");
 
     setIsAdding(true);
     try {
-      if (kanjiEntry) {
-        saveWord({
-          slug: `kanji-${query}`,
-          word: query,
-          reading: [...(kanjiEntry.on_readings || []), ...(kanjiEntry.kun_readings || [])].join(", "),
-          meaning: kanjiEntry.meanings?.join(", ") || t("dictionary.noMeaning"),
-          kanjiData: kanjiEntry,
-          source: "kanji-explorer",
-        });
-        const result = await saveKanjiToAnki({
-          kanji: query,
-          back,
-          deckName: ankiSettings.deck,
-          modelName: ankiSettings.model,
-          frontField: ankiSettings.frontField,
-          backField: ankiSettings.backField,
-          tags: ankiSettings.tags || "",
-        });
-        saveWord({
-          slug: `kanji-${query}`,
-          word: query,
-          reading: [...(kanjiEntry.on_readings || []), ...(kanjiEntry.kun_readings || [])].join(", "),
-          meaning: kanjiEntry.meanings?.join(", ") || t("dictionary.noMeaning"),
-          kanjiData: kanjiEntry,
-          source: "kanji-explorer",
-          ankiNoteId: result.noteId,
-          ankiSyncedAt: new Date().toISOString(),
-        });
-        if (result.created) {
-          recordAddedCard({
-            front,
-            source: query,
-            noteId: result.noteId,
-            addedAt: new Date().toISOString(),
-          });
-        }
-        setAnkiConnection("connected");
-        toast.success(messageText({
-          key: result.created ? "dictionary.kanjiAdded" : "dictionary.kanjiUpdated",
-          options: { id: result.noteId },
-        }));
-        return;
-      }
-
       const noteId = await addAnkiNote({
         deckName: ankiSettings.deck,
         modelName: ankiSettings.model,
@@ -212,9 +142,7 @@ function Dictionary() {
       setAnkiConnection("connected");
       toast.success(messageText({ key: "dictionary.added", options: { id: noteId } }));
     } catch (requestError) {
-      toast.error(messageText(kanjiEntry
-        ? { key: "dictionary.kanjiSyncFailed", options: { error: requestError.message || t("dictionary.addFailed") } }
-        : { key: "dictionary.addFailed", detail: requestError.message }));
+      toast.error(messageText({ key: "dictionary.addFailed", detail: requestError.message }));
     } finally {
       setIsAdding(false);
     }
@@ -273,65 +201,25 @@ function Dictionary() {
         )}
       </section>
 
-      {error?.key === "dictionary.noResults" && (
-        <div role="status" className="border border-white/15 bg-[#202421] px-4 py-3 text-sm text-gray-200">
-          {messageText(error)}
+      {error && (
+        <div
+          role={error.key === "dictionary.noResults" ? "status" : "alert"}
+          className={`flex flex-col gap-2 border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between ${
+            error.key === "dictionary.noResults"
+              ? "border-white/15 bg-[#202421] text-gray-200"
+              : "border-red-400/60 bg-red-950/40 text-red-200"
+          }`}
+        >
+          <span>{messageText(error)}</span>
           <a
             href={`https://jisho.org/search/${encodeURIComponent(query)}`}
             target="_blank"
             rel="noreferrer"
-            className="ml-2 inline-flex items-center gap-1 font-bold underline underline-offset-2 hover:text-white"
+            className="inline-flex shrink-0 items-center gap-1 font-bold underline underline-offset-2 hover:text-white"
           >
             {t("dictionary.openJisho")} <ArrowUpRight size={14} />
           </a>
         </div>
-      )}
-
-      {kanjiEntry && (
-        <section className="border border-yellow-200/70 bg-ldark p-4 sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <span className="text-xs uppercase tracking-widest text-gray-400">{t("dictionary.kanjiEntry")}</span>
-              <h3 className="mt-2 font-serif text-6xl text-primary">{query}</h3>
-              <p className="mt-2 text-sm text-gray-200">{kanjiEntry.meanings?.join(", ") || t("dictionary.noMeaning")}</p>
-            </div>
-            <button
-              type="button"
-              onClick={addSelectedToAnki}
-              disabled={isAdding}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 bg-primary px-4 py-2 text-sm font-bold text-black hover:bg-yellow-300 disabled:cursor-wait disabled:opacity-60"
-            >
-              {isAdding ? t("dictionary.savingSyncing") : savedWords.some((word) => word.slug === `kanji-${query}`) ? t("dictionary.kanjiSyncAction") : t("dictionary.kanjiSaveAction")}
-            </button>
-          </div>
-          <div className="mt-5 grid gap-3 border-t border-white/15 pt-5 sm:grid-cols-2">
-            <div>
-              <p className="text-xs uppercase text-gray-400">{t("dictionary.onYomi")}</p>
-              <p className="mt-1 text-sm">{kanjiEntry.on_readings?.join("、") || "—"}</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-gray-400">{t("dictionary.kunYomi")}</p>
-              <p className="mt-1 text-sm">{kanjiEntry.kun_readings?.join("、") || "—"}</p>
-            </div>
-            <p className="text-sm text-gray-300 sm:col-span-2">
-              {t("dictionary.strokes")}: {kanjiEntry.stroke_count ?? "—"} · {t("dictionary.grade")}: {kanjiEntry.grade ?? "—"} · {t("dictionary.jlpt")}: {kanjiEntry.jlpt ?? "—"}
-            </p>
-            {kanjiEntry.examples?.length > 0 && (
-              <div className="sm:col-span-2">
-                <p className="mb-2 text-xs uppercase text-gray-400">{t("dictionary.wordsUsingKanji")}</p>
-                <ul className="grid gap-2 sm:grid-cols-2">
-                  {kanjiEntry.examples.slice(0, 8).map((word) => (
-                    <li key={`${word.japanese}-${word.readings?.[0]}`} className="border border-white/10 px-3 py-2 text-sm">
-                      <span className="font-serif text-lg text-primary">{word.japanese}</span>
-                      <span className="ml-2 text-gray-300">{word.readings?.join("、")}</span>
-                      <p className="mt-1 text-gray-400">{word.meanings?.join(", ")}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        </section>
       )}
 
       {entries.length > 0 && (
