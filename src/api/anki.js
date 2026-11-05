@@ -46,242 +46,430 @@ export async function getModelFields(modelName) {
   return ankiRequest("modelFieldNames", { modelName });
 }
 
-const jishoCardCss = `
+const jishoCardCss =`
+/* Base card */
 .card {
   box-sizing: border-box;
   min-height: 100vh;
   margin: 0;
-  padding: clamp(24px, 7vh, 68px) 20px;
+  padding: 35px 20px;
+  background: #f3f2eb;
   color: #293a35;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(226, 190, 151, 0.22), transparent 32%),
-    linear-gradient(145deg, #f8f5ee 0%, #edf1e9 100%);
-  font-family: "Noto Serif JP", "Yu Mincho", "游明朝", "Hiragino Mincho ProN", serif;
+  font-family: "Yu Mincho", "游明朝", "YuMincho",
+    "Hiragino Mincho ProN", serif;
   font-size: 20px;
   text-align: center;
 }
+
+/* Front */
 .jta-front {
-  position: relative;
   box-sizing: border-box;
-  display: grid;
-  place-content: center;
-  width: min(100%, 760px);
-  min-height: min(60vh, 440px);
-  margin: clamp(24px, 8vh, 72px) auto;
-  padding: clamp(56px, 9vw, 88px) 28px;
-  overflow-wrap: anywhere;
-  border: 1px solid rgba(47, 72, 61, 0.12);
-  border-radius: 20px;
-  background: rgba(255, 254, 250, 0.94);
-  box-shadow: 0 24px 70px rgba(40, 54, 46, 0.11), 0 3px 10px rgba(40, 54, 46, 0.05);
+  max-width: 760px;
+  min-height: 350px;
+  margin: 40px auto;
+  padding: 70px 25px;
+  border: 1px solid #dce2d8;
+  border-radius: 16px;
+  background: #fffefa;
   color: #263a33;
-  font-size: clamp(3rem, 11vw, 5.5rem);
-  letter-spacing: 0.04em;
-  line-height: 1.3;
+  font-size: 64px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
-.jta-front::before {
-  position: absolute;
-  top: 24px;
-  left: 28px;
-  color: #77877b;
-  content: "JISHO  /  VOCABULARY";
-  font-family: "DM Sans", "Yu Gothic", Arial, sans-serif;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-}
-.jta-front::after {
-  position: absolute;
-  bottom: 24px;
-  left: calc(50% - 22px);
-  width: 44px;
-  height: 3px;
-  border-radius: 3px;
-  background: #d4775b;
-  content: "";
-}
+
+/* Back */
 .jta-back {
   box-sizing: border-box;
-  width: min(100%, 760px);
+  max-width: 760px;
   margin: 0 auto;
-  padding: clamp(22px, 5vw, 36px);
-  overflow-wrap: anywhere;
-  border: 1px solid rgba(47, 72, 61, 0.12);
-  border-radius: 18px;
-  background: rgba(255, 254, 250, 0.96);
-  box-shadow: 0 16px 46px rgba(40, 54, 46, 0.08);
+  padding: 28px;
+  border: 1px solid #dce2d8;
+  border-radius: 16px;
+  background: #fffefa;
   color: #33423b;
-  font-family: "DM Sans", "Yu Gothic", Arial, sans-serif;
-  font-size: clamp(1rem, 2.8vw, 1.15rem);
-  line-height: 1.85;
+  font-family: Arial, "Yu Gothic", sans-serif;
+  font-size: 18px;
+  line-height: 1.7;
   text-align: left;
-  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
-.jta-back .jta-back {
-  width: auto;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+
+/* Sections */
+.jta-section + .jta-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #dce2d8;
 }
-.jta-section {
-  margin-top: 0.8rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid rgba(47, 72, 61, 0.1);
-  border-radius: 12px;
-  background: rgba(243, 242, 235, 0.62);
-}
-.jta-section:first-child {
-  margin-top: 0;
-}
-.jta-section.jta-section-compact {
-  display: inline-block;
-  width: calc(50% - 0.45rem);
-  min-height: 100px;
-  margin: 0.25rem 0.45rem 0.25rem 0;
-  vertical-align: top;
-}
+
 .jta-section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 0.5rem;
+  margin-bottom: 10px;
   color: #78877b;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  line-height: 1.4;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 2px;
   text-transform: uppercase;
 }
-.jta-section-title::before {
-  width: 0.4rem;
-  height: 0.4rem;
-  border-radius: 50%;
-  background: #d4775b;
-  content: "";
-}
+
+/* Readings */
 .jta-reading-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 8px;
 }
+
 .jta-reading {
-  display: inline-flex;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid rgba(47, 72, 61, 0.13);
-  border-radius: 999px;
+  padding: 5px 12px;
+  border: 1px solid #dce2d8;
+  border-radius: 20px;
   background: #f3f2eb;
   color: #34443c;
-  font-family: "Noto Serif JP", "Yu Mincho", serif;
-  font-size: 1.05em;
+  font-family: "Yu Mincho", serif;
 }
-.jta-meaning-text {
-  margin: 0;
-  line-height: 1.65;
+
+/* Senses */
+.jta-sense + .jta-sense {
+  margin-top: 12px;
 }
-.jta-meaning-pos {
+
+.jta-pos {
   color: #78877b;
-  font-size: 0.8em;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: bold;
 }
-.jta-example-list {
-  margin: 0;
-  padding-left: 1.6rem;
+
+.jta-meaning-list {
+  margin: 5px 0 0;
+  padding-left: 22px;
 }
-.jta-example-item {
-  padding-left: 0.2rem;
+
+.jta-meaning-list li + li {
+  margin-top: 3px;
 }
-.jta-example-item + .jta-example-item {
-  margin-top: 0.65rem;
-}
-.jta-example-japanese {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.15rem 0.65rem;
+
+/* Examples */
+.jta-example {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
   align-items: baseline;
 }
-.jta-example-word {
-  overflow-wrap: anywhere;
-  color: #34443c;
-  font-family: "Noto Serif JP", "Yu Mincho", serif;
-  font-size: 1.13em;
-  font-weight: 600;
+
+.jta-example + .jta-example {
+  margin-top: 12px;
 }
+
+.jta-example-word {
+  color: #34443c;
+  font-family: "Yu Mincho", serif;
+  font-size: 22px;
+  font-weight: bold;
+}
+
 .jta-example-reading {
   color: #78877b;
-  font-size: 0.9em;
+  font-size: 14px;
 }
-.jta-example-meaning {
-  margin: 0.12rem 0 0;
+
+.jta-example-meanings {
+  grid-column: 1 / -1;
   color: #56665d;
-  font-size: 0.92em;
-  line-height: 1.55;
+  font-size: 16px;
 }
+
 .jta-empty {
-  margin: 0;
   color: #89948c;
-  font-size: 0.9em;
   font-style: italic;
 }
+
+/* Answer separator */
 #answer {
-  width: min(100%, 760px);
-  height: 1px;
-  margin: 0 auto clamp(20px, 4vh, 32px);
+  max-width: 760px;
+  margin: 25px auto;
   border: 0;
-  background: linear-gradient(90deg, transparent, rgba(47, 72, 61, 0.22), transparent);
+  border-top: 1px solid #dce2d8;
 }
+
+/* Night mode */
 .card.nightMode {
-  color: #e7e5dc;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(132, 91, 63, 0.18), transparent 32%),
-    linear-gradient(145deg, #202823 0%, #18211e 100%);
-}
-.card.nightMode .jta-front,
-.card.nightMode .jta-back {
-  border-color: rgba(226, 232, 221, 0.12);
-  background: rgba(36, 46, 40, 0.96);
+  background: #202823;
   color: #e7e5dc;
 }
-.card.nightMode .jta-back .jta-back {
-  border: 0;
-  background: transparent;
-  box-shadow: none;
+
+.nightMode .jta-front,
+.nightMode .jta-back {
+  border-color: #414d44;
+  background: #29342d;
+  color: #e7e5dc;
 }
-.card.nightMode .jta-front::before {
+
+.nightMode .jta-section + .jta-section {
+  border-top-color: #414d44;
+}
+
+.nightMode .jta-section-title,
+.nightMode .jta-pos,
+.nightMode .jta-example-reading {
   color: #aab8aa;
 }
-.card.nightMode .jta-section {
-  border-color: rgba(226, 232, 221, 0.1);
-  background: rgba(48, 59, 52, 0.48);
-}
-.card.nightMode .jta-section-title,
-.card.nightMode .jta-meaning-pos,
-.card.nightMode .jta-example-reading {
-  color: #aab8aa;
-}
-.card.nightMode .jta-meaning-text {
+
+.nightMode .jta-reading {
+  border-color: #414d44;
+  background: #354138;
   color: #e7e5dc;
 }
-.card.nightMode .jta-reading {
-  border-color: rgba(226, 232, 221, 0.13);
-  background: #303b34;
+
+.nightMode .jta-example-word {
   color: #e7e5dc;
 }
-.card.nightMode .jta-example-word {
-  color: #e7e5dc;
-}
-.card.nightMode .jta-example-meaning {
+
+.nightMode .jta-example-meanings {
   color: #c1c9c0;
 }
-.card.nightMode .jta-empty {
+
+.nightMode .jta-empty {
   color: #aab8aa;
 }
-.card.nightMode #answer {
-  background: linear-gradient(90deg, transparent, rgba(226, 232, 221, 0.22), transparent);
+
+.nightMode #answer {
+  border-top-color: #414d44;
 }
 `;
+// const jishoCardCss = `
+// .card {
+//   box-sizing: border-box;
+//   min-height: 100vh;
+//   margin: 0;
+//   padding: clamp(24px, 7vh, 68px) 20px;
+//   color: #293a35;
+//   background:
+//     radial-gradient(circle at 12% 8%, rgba(226, 190, 151, 0.22), transparent 32%),
+//     linear-gradient(145deg, #f8f5ee 0%, #edf1e9 100%);
+//   font-family: "Noto Serif JP", "Yu Mincho", "游明朝", "Hiragino Mincho ProN", serif;
+//   font-size: 20px;
+//   text-align: center;
+// }
+// .jta-front {
+//   position: relative;
+//   box-sizing: border-box;
+//   display: grid;
+//   place-content: center;
+//   width: min(100%, 760px);
+//   min-height: min(60vh, 440px);
+//   margin: clamp(24px, 8vh, 72px) auto;
+//   padding: clamp(56px, 9vw, 88px) 28px;
+//   overflow-wrap: anywhere;
+//   border: 1px solid rgba(47, 72, 61, 0.12);
+//   border-radius: 20px;
+//   background: rgba(255, 254, 250, 0.94);
+//   box-shadow: 0 24px 70px rgba(40, 54, 46, 0.11), 0 3px 10px rgba(40, 54, 46, 0.05);
+//   color: #263a33;
+//   font-size: clamp(3rem, 11vw, 5.5rem);
+//   letter-spacing: 0.04em;
+//   line-height: 1.3;
+// }
+// .jta-front::before {
+//   position: absolute;
+//   top: 24px;
+//   left: 28px;
+//   color: #77877b;
+//   content: "JISHO  /  VOCABULARY";
+//   font-family: "DM Sans", "Yu Gothic", Arial, sans-serif;
+//   font-size: 0.68rem;
+//   font-weight: 700;
+//   letter-spacing: 0.18em;
+// }
+// .jta-front::after {
+//   position: absolute;
+//   bottom: 24px;
+//   left: calc(50% - 22px);
+//   width: 44px;
+//   height: 3px;
+//   border-radius: 3px;
+//   background: #d4775b;
+//   content: "";
+// }
+// .jta-back {
+//   box-sizing: border-box;
+//   width: min(100%, 760px);
+//   margin: 0 auto;
+//   padding: clamp(22px, 5vw, 36px);
+//   overflow-wrap: anywhere;
+//   border: 1px solid rgba(47, 72, 61, 0.12);
+//   border-radius: 18px;
+//   background: rgba(255, 254, 250, 0.96);
+//   box-shadow: 0 16px 46px rgba(40, 54, 46, 0.08);
+//   color: #33423b;
+//   font-family: "DM Sans", "Yu Gothic", Arial, sans-serif;
+//   font-size: clamp(1rem, 2.8vw, 1.15rem);
+//   line-height: 1.85;
+//   text-align: left;
+//   white-space: pre-line;
+// }
+// .jta-back .jta-back {
+//   width: auto;
+//   margin: 0;
+//   padding: 0;
+//   border: 0;
+//   border-radius: 0;
+//   background: transparent;
+//   box-shadow: none;
+// }
+// .jta-section {
+//   margin-top: 0.8rem;
+//   padding: 0.9rem 1rem;
+//   border: 1px solid rgba(47, 72, 61, 0.1);
+//   border-radius: 12px;
+//   background: rgba(243, 242, 235, 0.62);
+// }
+// .jta-section:first-child {
+//   margin-top: 0;
+// }
+// .jta-section.jta-section-compact {
+//   display: inline-block;
+//   width: calc(50% - 0.45rem);
+//   min-height: 100px;
+//   margin: 0.25rem 0.45rem 0.25rem 0;
+//   vertical-align: top;
+// }
+// .jta-section-title {
+//   display: flex;
+//   align-items: center;
+//   gap: 0.6rem;
+//   margin: 0 0 0.5rem;
+//   color: #78877b;
+//   font-size: 0.7rem;
+//   font-weight: 800;
+//   letter-spacing: 0.16em;
+//   line-height: 1.4;
+//   text-transform: uppercase;
+// }
+// .jta-section-title::before {
+//   width: 0.4rem;
+//   height: 0.4rem;
+//   border-radius: 50%;
+//   background: #d4775b;
+//   content: "";
+// }
+// .jta-reading-list {
+//   display: flex;
+//   flex-wrap: wrap;
+//   gap: 0.5rem;
+// }
+// .jta-reading {
+//   display: inline-flex;
+//   padding: 0.3rem 0.7rem;
+//   border: 1px solid rgba(47, 72, 61, 0.13);
+//   border-radius: 999px;
+//   background: #f3f2eb;
+//   color: #34443c;
+//   font-family: "Noto Serif JP", "Yu Mincho", serif;
+//   font-size: 1.05em;
+// }
+// .jta-meaning-text {
+//   margin: 0;
+//   line-height: 1.65;
+// }
+// .jta-meaning-pos {
+//   color: #78877b;
+//   font-size: 0.8em;
+//   font-weight: 700;
+// }
+// .jta-example-list {
+//   margin: 0;
+//   padding-left: 1.6rem;
+// }
+// .jta-example-item {
+//   padding-left: 0.2rem;
+// }
+// .jta-example-item + .jta-example-item {
+//   margin-top: 0.65rem;
+// }
+// .jta-example-japanese {
+//   display: flex;
+//   flex-wrap: wrap;
+//   gap: 0.15rem 0.65rem;
+//   align-items: baseline;
+// }
+// .jta-example-word {
+//   overflow-wrap: anywhere;
+//   color: #34443c;
+//   font-family: "Noto Serif JP", "Yu Mincho", serif;
+//   font-size: 1.13em;
+//   font-weight: 600;
+// }
+// .jta-example-reading {
+//   color: #78877b;
+//   font-size: 0.9em;
+// }
+// .jta-example-meaning {
+//   margin: 0.12rem 0 0;
+//   color: #56665d;
+//   font-size: 0.92em;
+//   line-height: 1.55;
+// }
+// .jta-empty {
+//   margin: 0;
+//   color: #89948c;
+//   font-size: 0.9em;
+//   font-style: italic;
+// }
+// #answer {
+//   width: min(100%, 760px);
+//   height: 1px;
+//   margin: 0 auto clamp(20px, 4vh, 32px);
+//   border: 0;
+//   background: linear-gradient(90deg, transparent, rgba(47, 72, 61, 0.22), transparent);
+// }
+// .card.nightMode {
+//   color: #e7e5dc;
+//   background:
+//     radial-gradient(circle at 12% 8%, rgba(132, 91, 63, 0.18), transparent 32%),
+//     linear-gradient(145deg, #202823 0%, #18211e 100%);
+// }
+// .card.nightMode .jta-front,
+// .card.nightMode .jta-back {
+//   border-color: rgba(226, 232, 221, 0.12);
+//   background: rgba(36, 46, 40, 0.96);
+//   color: #e7e5dc;
+// }
+// .card.nightMode .jta-back .jta-back {
+//   border: 0;
+//   background: transparent;
+//   box-shadow: none;
+// }
+// .card.nightMode .jta-front::before {
+//   color: #aab8aa;
+// }
+// .card.nightMode .jta-section {
+//   border-color: rgba(226, 232, 221, 0.1);
+//   background: rgba(48, 59, 52, 0.48);
+// }
+// .card.nightMode .jta-section-title,
+// .card.nightMode .jta-meaning-pos,
+// .card.nightMode .jta-example-reading {
+//   color: #aab8aa;
+// }
+// .card.nightMode .jta-meaning-text {
+//   color: #e7e5dc;
+// }
+// .card.nightMode .jta-reading {
+//   border-color: rgba(226, 232, 221, 0.13);
+//   background: #303b34;
+//   color: #e7e5dc;
+// }
+// .card.nightMode .jta-example-word {
+//   color: #e7e5dc;
+// }
+// .card.nightMode .jta-example-meaning {
+//   color: #c1c9c0;
+// }
+// .card.nightMode .jta-empty {
+//   color: #aab8aa;
+// }
+// .card.nightMode #answer {
+//   background: linear-gradient(90deg, transparent, rgba(226, 232, 221, 0.22), transparent);
+// }
+// `;
 
 const jishoCardCssStart = "/* JishoToAnki card theme: begin */";
 const jishoCardCssEnd = "/* JishoToAnki card theme: end */";
