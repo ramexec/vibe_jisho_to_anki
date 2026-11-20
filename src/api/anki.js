@@ -53,10 +53,9 @@ const jishoCardCss =`
   min-height: 100vh;
   margin: 0;
   padding: 35px 20px;
-  background: #f3f2eb;
-  color: #293a35;
-  font-family: "Yu Mincho", "游明朝", "YuMincho",
-    "Hiragino Mincho ProN", serif;
+  background: #101311;
+  color: #f5f5f5;
+  font-family: "DM Sans", "Yu Gothic", "Hiragino Sans", sans-serif;
   font-size: 20px;
   text-align: center;
 }
@@ -68,11 +67,13 @@ const jishoCardCss =`
   min-height: 350px;
   margin: 40px auto;
   padding: 70px 25px;
-  border: 1px solid #dce2d8;
-  border-radius: 16px;
-  background: #fffefa;
-  color: #263a33;
+  border: 1px solid rgba(255, 255, 0, 0.55);
+  border-radius: 4px;
+  background: #003536;
+  color: #ffff00;
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
   font-size: 64px;
+  font-weight: 700;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -83,11 +84,11 @@ const jishoCardCss =`
   max-width: 760px;
   margin: 0 auto;
   padding: 28px;
-  border: 1px solid #dce2d8;
-  border-radius: 16px;
-  background: #fffefa;
-  color: #33423b;
-  font-family: Arial, "Yu Gothic", sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 4px;
+  background: #202421;
+  color: #e5e7eb;
+  font-family: "DM Sans", "Yu Gothic", "Hiragino Sans", sans-serif;
   font-size: 18px;
   line-height: 1.7;
   text-align: left;
@@ -98,12 +99,12 @@ const jishoCardCss =`
 .jta-section + .jta-section {
   margin-top: 20px;
   padding-top: 18px;
-  border-top: 1px solid #dce2d8;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .jta-section-title {
   margin-bottom: 10px;
-  color: #78877b;
+  color: #ffff00;
   font-size: 12px;
   font-weight: bold;
   letter-spacing: 2px;
@@ -119,11 +120,11 @@ const jishoCardCss =`
 
 .jta-reading {
   padding: 5px 12px;
-  border: 1px solid #dce2d8;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 20px;
-  background: #f3f2eb;
-  color: #34443c;
-  font-family: "Yu Mincho", serif;
+  background: #101311;
+  color: #f5f5f5;
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
 }
 
 /* Senses */
@@ -132,7 +133,7 @@ const jishoCardCss =`
 }
 
 .jta-pos {
-  color: #78877b;
+  color: #a8b0ab;
   font-size: 14px;
   font-weight: bold;
 }
@@ -159,25 +160,25 @@ const jishoCardCss =`
 }
 
 .jta-example-word {
-  color: #34443c;
-  font-family: "Yu Mincho", serif;
+  color: #ffff00;
+  font-family: "Noto Serif JP", "Yu Mincho", serif;
   font-size: 22px;
   font-weight: bold;
 }
 
 .jta-example-reading {
-  color: #78877b;
+  color: #a8b0ab;
   font-size: 14px;
 }
 
 .jta-example-meanings {
   grid-column: 1 / -1;
-  color: #56665d;
+  color: #cbd1cc;
   font-size: 16px;
 }
 
 .jta-empty {
-  color: #89948c;
+  color: #9ca3af;
   font-style: italic;
 }
 
@@ -186,13 +187,13 @@ const jishoCardCss =`
   max-width: 760px;
   margin: 25px auto;
   border: 0;
-  border-top: 1px solid #dce2d8;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 /* Night mode */
 .card.nightMode {
-  background: #202823;
-  color: #e7e5dc;
+  background: #101311;
+  color: #f5f5f5;
 }
 
 .nightMode .jta-front,
@@ -496,6 +497,17 @@ export async function createJishoNoteType() {
     await ankiRequest("updateModelStyling", {
       model: { name: modelName, css: withJishoCardCss(styling.css) },
     });
+    await ankiRequest("updateModelTemplates", {
+      model: {
+        name: modelName,
+        templates: {
+          "JishoToAnki Card": {
+            Front: '<div class="jta-front">{{Front}}</div>',
+            Back: '{{FrontSide}}<hr id="answer"><div class="jta-back">{{Back}}</div>',
+          },
+        },
+      },
+    });
     return false;
   }
 
@@ -599,8 +611,8 @@ export async function addAnkiNote({
   }
 
   const fields = {
-    [frontField]: `<div class="jta-front">${escapeHtml(front)}</div>`,
-    [backField]: `<div class="jta-back">${renderBackSections(backSections)}</div>`,
+    [frontField]: escapeHtml(front),
+    [backField]: renderBackSections(backSections),
   };
   const noteId = await ankiRequest("addNote", {
     note: {
@@ -642,8 +654,8 @@ export async function saveWordToAnki({
 
   const syncTag = getWordSyncTag(slug);
   const fields = {
-    [frontField]: `<div class="jta-front">${escapeHtml(front)}</div>`,
-    [backField]: `<div class="jta-back">${renderBackSections(backSections)}</div>`,
+    [frontField]: escapeHtml(front),
+    [backField]: renderBackSections(backSections),
   };
   const taggedNotes = await ankiRequest("findNotes", {
     query: `tag:${syncTag}`,
@@ -727,8 +739,8 @@ export async function saveKanjiToAnki({
 
   const syncTag = getKanjiSyncTag(kanji);
   const fields = {
-    [frontField]: `<div class="jta-front">${escapeHtml(kanji)}</div>`,
-    [backField]: `<div class="jta-back">${renderBackSections(backSections)}</div>`,
+    [frontField]: escapeHtml(kanji),
+    [backField]: renderBackSections(backSections),
   };
   const matchingNotes = await ankiRequest("findNotes", {
     query: `tag:${syncTag}`,
@@ -802,6 +814,40 @@ export async function syncKanjiFromAnki({ frontField, backField }) {
       slug: `kanji-${kanji}`,
       word: kanji,
       reading: readings.join(", "),
+      meaning: section("MEANING") || back || "Synced from Anki",
+      ankiNoteId: note.noteId,
+      ankiSyncedAt: new Date().toISOString(),
+      source: "anki",
+    }];
+  });
+}
+
+export async function syncWordsFromAnki({ frontField, backField }) {
+  const taggedIds = await ankiRequest("findNotes", {
+    query: "tag:jta_word",
+  });
+  const modelIds = await ankiRequest("findNotes", {
+    query: "note:JishoToAnki",
+  });
+  const noteIds = [...new Set([...taggedIds, ...modelIds])];
+  if (!noteIds.length) return [];
+
+  const notes = await ankiRequest("notesInfo", { notes: noteIds });
+  return notes.flatMap((note) => {
+    const word = plainText(note.fields?.[frontField]?.value);
+    if (!word) return [];
+    const back = plainText(note.fields?.[backField]?.value);
+    const section = (name) => {
+      const match = back.match(
+        new RegExp(`(?:^|\\n)${name}\\s*\\n([\\s\\S]*?)(?=\\n\\n[A-Z][A-Z' /]+(?::|\\n)|$)`),
+      );
+      return match?.[1]?.trim() || "";
+    };
+    const readings = section("READINGS");
+    return [{
+      slug: `anki-word-${note.noteId}`,
+      word,
+      reading: readings || "",
       meaning: section("MEANING") || back || "Synced from Anki",
       ankiNoteId: note.noteId,
       ankiSyncedAt: new Date().toISOString(),

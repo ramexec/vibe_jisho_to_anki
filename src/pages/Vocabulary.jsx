@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { BookOpen, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { BookOpen, LoaderCircle, Pencil, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useAppStore } from "../stores/appStore";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { saveWordToAnki, syncWordsFromAnki } from "../api/anki";
 
 const emptyForm = { word: "", reading: "", meaning: "" };
 const inputClass =
@@ -30,10 +31,15 @@ function Vocabulary() {
   const saveWord = useAppStore((state) => state.saveWord);
   const updateWord = useAppStore((state) => state.updateWord);
   const removeWord = useAppStore((state) => state.removeWord);
+  const ankiSettings = useAppStore((state) => state.ankiSettings);
+  const recordAddedCard = useAppStore((state) => state.recordAddedCard);
+  const setAnkiConnection = useAppStore((state) => state.setAnkiConnection);
   const [filter, setFilter] = useState("");
   const [editingSlug, setEditingSlug] = useState("");
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
+  const [syncingSlug, setSyncingSlug] = useState("");
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const filteredWords = useMemo(() => {
     const term = filter.trim().toLocaleLowerCase();
@@ -104,6 +110,77 @@ function Vocabulary() {
     });
   }
 
+  async function syncWordToAnki(word) {
+    if (syncingSlug) return;
+    setSyncingSlug(word.slug);
+    const front = getWord(word);
+    const reading = getReading(word);
+    const meaning = getMeaning(word);
+    const backSections = [
+      ...(reading ? [{
+        title: "READINGS",
+        type: "readings",
+        items: reading.split(/[,、]/).map((item) => item.trim()).filter(Boolean),
+      }] : []),
+      {
+        title: "MEANING",
+        type: "meaning-list",
+        items: [meaning],
+      },
+    ];
+    try {
+      const result = await saveWordToAnki({
+        slug: word.slug,
+        deckName: ankiSettings.deck,
+        modelName: ankiSettings.model,
+        frontField: ankiSettings.frontField,
+        backField: ankiSettings.backField,
+        front,
+        backSections,
+        tags: ankiSettings.tags || "",
+      });
+      const ankiSyncedAt = new Date().toISOString();
+      updateWord(word.slug, {
+        ankiNoteId: result.noteId,
+        ankiSyncedAt,
+      });
+      recordAddedCard({
+        front,
+        source: "Vocabulary",
+        noteId: result.noteId,
+        addedAt: ankiSyncedAt,
+      });
+      setAnkiConnection("connected");
+      toast.success(t(result.created ? "vocabulary.ankiAdded" : "vocabulary.ankiUpdated", { id: result.noteId }));
+    } catch (error) {
+      setAnkiConnection("disconnected");
+      toast.error(`${t("vocabulary.ankiFailed")} ${error.message}`);
+    } finally {
+      setSyncingSlug("");
+    }
+  }
+
+  async function syncFromAnki() {
+    if (isSyncing) return;
+    setIsSyncing(true);
+    try {
+      const cards = await syncWordsFromAnki({
+        frontField: ankiSettings.frontField,
+        backField: ankiSettings.backField,
+      });
+      cards.forEach(saveWord);
+      setAnkiConnection("connected");
+      toast.success(cards.length
+        ? t("vocabulary.syncSuccess", { count: cards.length })
+        : t("vocabulary.noAnkiCards"));
+    } catch (error) {
+      setAnkiConnection("disconnected");
+      toast.error(`${t("vocabulary.syncFailed")} ${error.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  }
+
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 font-mono text-white">
       <section className="border border-yellow-200 bg-ldark p-4 sm:p-6">
@@ -115,16 +192,27 @@ function Vocabulary() {
               {t("vocabulary.count", { count: savedWords.length })}
             </p>
           </div>
-          <label className="relative block w-full sm:max-w-xs">
-            <span className="sr-only">{t("vocabulary.filterLabel")}</span>
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              className="min-h-11 w-full border border-white/20 bg-[#202421] py-2 pl-9 pr-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-primary"
-              placeholder={t("vocabulary.filterPlaceholder")}
-            />
-          </label>
+          <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row">
+            <label className="relative block w-full">
+              <span className="sr-only">{t("vocabulary.filterLabel")}</span>
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                className="min-h-11 w-full border border-white/20 bg-[#202421] py-2 pl-9 pr-3 text-sm text-white outline-none placeholder:text-gray-500 focus:border-primary"
+                placeholder={t("vocabulary.filterPlaceholder")}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={syncFromAnki}
+              disabled={isSyncing}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 border border-primary px-3 text-sm text-primary hover:bg-primary hover:text-black disabled:opacity-60"
+            >
+              {isSyncing ? <LoaderCircle size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+              {isSyncing ? t("vocabulary.syncing") : t("vocabulary.syncFromAnki")}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -192,6 +280,21 @@ function Vocabulary() {
               </div>
               <p className="mt-3 flex-1 whitespace-pre-wrap break-words text-sm leading-6 text-gray-200">{getMeaning(word, t("vocabulary.noMeaning"))}</p>
               <div className="mt-4 flex gap-2 border-t border-white/10 pt-3">
+                <button
+                  type="button"
+                  onClick={() => syncWordToAnki(word)}
+                  disabled={Boolean(syncingSlug)}
+                  className="inline-flex min-h-9 items-center gap-2 border border-primary px-3 text-xs text-primary hover:bg-primary hover:text-black disabled:opacity-60"
+                >
+                  {syncingSlug === word.slug
+                    ? <LoaderCircle size={14} className="animate-spin" />
+                    : <RefreshCw size={14} />}
+                  {syncingSlug === word.slug
+                    ? t("vocabulary.syncing")
+                    : word.ankiNoteId
+                      ? t("vocabulary.updateAnki")
+                      : t("vocabulary.addToAnki")}
+                </button>
                 <button
                   type="button"
                   onClick={() => editWord(word)}
