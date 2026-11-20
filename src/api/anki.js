@@ -71,9 +71,9 @@ const jishoCardCss =`
   border-radius: 4px;
   background: #003536;
   color: #ffff00;
-  font-family: "Noto Serif JP", "Yu Mincho", serif;
+  font-family: "Yu Mincho", "游明朝", "Noto Serif JP", serif;
   font-size: 64px;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -92,6 +92,7 @@ const jishoCardCss =`
   font-size: 18px;
   line-height: 1.7;
   text-align: left;
+  white-space: pre-line;
   overflow-wrap: anywhere;
 }
 
@@ -486,6 +487,79 @@ function withJishoCardCss(css = "") {
   return `${css.trim()}\n\n${jishoCardCssStart}\n${jishoCardCss}\n${jishoCardCssEnd}`;
 }
 
+function renderPlainTextBack() {
+  const back = document.querySelector(".jta-back-manual");
+  if (!back || back.querySelector(".jta-section")) return;
+
+  const text = back.innerText || back.textContent || "";
+  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const sections = [];
+  let section;
+
+  for (const line of lines) {
+    const heading = line.match(/^\s*(?:#{1,6}\s*)?([A-Z][A-Z' /]*?)\s*:?\s*$/);
+    if (heading) {
+      section = { title: heading[1].replace(/\s+/g, " "), items: [] };
+      sections.push(section);
+    } else if (section) {
+      section.items.push(line);
+    }
+  }
+
+  if (!sections.length) return;
+
+  const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character]);
+  const renderExamples = (items) => {
+    const examples = [];
+    let example;
+    for (const line of items) {
+      const numbered = line.match(/^\d+[.)]\s*(.+)$/);
+      if (numbered) {
+        example = { word: numbered[1], meanings: [] };
+        examples.push(example);
+      } else if (example) {
+        example.meanings.push(line);
+      } else {
+        examples.push({ word: line, meanings: [] });
+      }
+    }
+    return `<ol class="jta-meaning-list">${examples.map((item) =>
+      `<li><span class="jta-example-word">${escapeHtml(item.word)}</span>${item.meanings.length
+        ? `<div class="jta-example-meanings">${item.meanings.map(escapeHtml).join(", ")}</div>`
+        : ""}</li>`,
+    ).join("")}</ol>`;
+  };
+
+  back.innerHTML = sections.map(({ title, items }) => {
+    const normalizedTitle = title.toUpperCase();
+    let content;
+    if (["ON'YOMI", "KUN'YOMI", "READINGS"].includes(normalizedTitle)) {
+      const readings = items.flatMap((item) => item.split(/[、,]/))
+        .map((item) => item.trim()).filter(Boolean);
+      content = `<div class="jta-reading-list">${readings.map((item) =>
+        `<span class="jta-reading">${escapeHtml(item)}</span>`,
+      ).join("")}</div>`;
+    } else if (["EXAMPLE WORDS", "EXAMPLES"].includes(normalizedTitle)) {
+      content = renderExamples(items);
+    } else {
+      content = items.map((item) =>
+        `<p class="jta-meaning-text">${escapeHtml(item)}</p>`,
+      ).join("");
+    }
+    return `<section class="jta-section"><h3 class="jta-section-title">${escapeHtml(title)}</h3>${content}</section>`;
+  }).join("");
+}
+
+const jishoCardBackScript = `<script>(${renderPlainTextBack.toString()})();</script>`;
+const jishoCardFrontTemplate = '<div class="jta-front">{{Front}}</div>';
+const jishoCardBackTemplate = `{{FrontSide}}<hr id="answer"><div class="jta-back jta-back-manual">{{Back}}</div>${jishoCardBackScript}`;
+
 export async function createJishoNoteType() {
   const modelName = "JishoToAnki";
   const models = await ankiRequest("modelNames");
@@ -502,8 +576,8 @@ export async function createJishoNoteType() {
         name: modelName,
         templates: {
           "JishoToAnki Card": {
-            Front: '<div class="jta-front">{{Front}}</div>',
-            Back: '{{FrontSide}}<hr id="answer"><div class="jta-back">{{Back}}</div>',
+            Front: jishoCardFrontTemplate,
+            Back: jishoCardBackTemplate,
           },
         },
       },
@@ -518,8 +592,8 @@ export async function createJishoNoteType() {
     cardTemplates: [
       {
         Name: "JishoToAnki Card",
-        Front: '<div class="jta-front">{{Front}}</div>',
-        Back: '{{FrontSide}}<hr id="answer"><div class="jta-back">{{Back}}</div>',
+        Front: jishoCardFrontTemplate,
+        Back: jishoCardBackTemplate,
       },
     ],
   });
